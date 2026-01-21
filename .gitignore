@@ -16,3 +16,4 @@ __pycache__/
 # Dados brutos (não versionar)
 data/raw/*
 !data/raw/.gitkeep
+data/interim/*
