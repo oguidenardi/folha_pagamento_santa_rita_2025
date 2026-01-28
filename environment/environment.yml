@@ -1,7 +1,6 @@
 name: folha-pagamento-2025
 channels:
   - conda-forge
-  - defaults
 dependencies:
   - _openmp_mutex=4.5=2_gnu
   - anyio=4.12.1=pyhcf101f3_0
