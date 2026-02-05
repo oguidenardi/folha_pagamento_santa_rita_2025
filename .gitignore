@@ -15,7 +15,13 @@ __pycache__/
 
 # Dados brutos (não versionar)
 data/raw/*
-/data/interim/
-/data/processed/
 !data/raw/.gitkeep
 
+# Dados intermediários
+data/interim/*
+!data/interim/.gitkeep
+
+# Processados – ignorar tudo, exceto arquivos necessários para o dashboard
+data/processed/*
+!data/processed/*.parquet
+!data/processed/.gitkeep
