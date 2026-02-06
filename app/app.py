@@ -383,3 +383,264 @@ específicas dos cargos, como vínculos temporários, contratos por período let
 > **Nota metodológica:** a análise considera exclusivamente desligamentos ocorridos em 2025 e inclui apenas servidoras do gênero feminino, com base na data efetiva de desligamento registrada.
 """)
 st.divider()
+
+
+st.markdown("""
+# Distribuição de servidores do gênero feminino por categoria
+
+O gráfico a seguir mostra a quantidade de **servidoras únicas** por categoria de cargo em 2025
+(contagem deduplicada por `id_servidor` para evitar duplicidades no dataset mensal).
+""")
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Deduplicação global (regra padrão do projeto)
+df_unico = df.drop_duplicates(subset="id_servidor")
+
+# Filtra feminino no df deduplicado
+df_fem_unico = df_unico[df_unico["genero"] == "F"]
+
+# Contagem por categoria (servidoras únicas)
+categoria_feminino = (
+    df_fem_unico.groupby("categoria_cargo")["id_servidor"]
+    .nunique()
+    .reset_index(name="total_feminino")
+    .sort_values("total_feminino", ascending=False)
+)
+
+categoria_feminino["label"] = categoria_feminino["total_feminino"].astype(int).astype(str)
+
+st.markdown("### Distribuição de servidoras por categoria de cargo")
+
+base = alt.Chart(categoria_feminino).encode(
+    y=alt.Y(
+        "categoria_cargo:N",
+        sort="-x",
+        title=None
+    ),
+    x=alt.X(
+        "total_feminino:Q",
+        title="Total de servidoras"
+    ),
+    tooltip=[
+        alt.Tooltip("categoria_cargo:N", title="Categoria"),
+        alt.Tooltip("total_feminino:Q", title="Total"),
+    ]
+)
+
+bars = base.mark_bar(size=32)
+
+labels = base.mark_text(
+    align="left",
+    baseline="middle",
+    dx=8,
+    fontSize=14,
+    fontWeight="bold"
+).encode(
+    text="label:N"
+)
+
+chart = (bars + labels).properties(
+    height=min(700, 40 * len(categoria_feminino) + 80),
+    padding={"right": 80}
+)
+
+st.altair_chart(chart, use_container_width=True)
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Narrativa dinâmica
+def get_count(df_counts, categoria):
+    row = df_counts.loc[df_counts["categoria_cargo"] == categoria, "total_feminino"]
+    return int(row.iloc[0]) if len(row) else 0
+
+# Top 5 categorias (se existirem)
+top = categoria_feminino.head(5).copy()
+
+# Puxa algumas categorias específicas
+educ = get_count(categoria_feminino, "educacao")
+saude = get_count(categoria_feminino, "saude")
+operacional = get_count(categoria_feminino, "operacional")
+administrativo = get_count(categoria_feminino, "administrativo")
+assist = get_count(categoria_feminino, "assistencia_social")
+comiss = get_count(categoria_feminino, "comissionado")
+cultura = get_count(categoria_feminino, "cultura")
+tecnico = get_count(categoria_feminino, "tecnico")
+politico = get_count(categoria_feminino, "politico")
+
+st.markdown("Observa-se que:")
+
+bullets = []
+
+# Destaque: categoria líder (top 1)
+if not categoria_feminino.empty:
+    top1 = categoria_feminino.iloc[0]
+    bullets.append(
+        f"- A categoria **{top1['categoria_cargo']}** concentra o maior número de servidoras, com **{int(top1['total_feminino'])}**."
+    )
+
+# Destaques adicionais (se existirem)
+if saude > 0:
+    bullets.append(f"- A área de **saúde** aparece com **{saude}** servidoras.")
+if operacional > 0:
+    bullets.append(f"- A categoria **operacional** soma **{operacional}** servidoras.")
+if administrativo > 0:
+    bullets.append(f"- Em **administrativo**, há **{administrativo}** servidoras.")
+if assist > 0:
+    bullets.append(f"- Em **assistência social**, há **{assist}** servidoras.")
+if comiss > 0:
+    bullets.append(f"- Nos cargos **comissionados**, foram identificadas **{comiss}** servidoras.")
+if cultura > 0 or tecnico > 0 or politico > 0:
+    parts = []
+    if cultura > 0: parts.append(f"**cultura** ({cultura})")
+    if tecnico > 0: parts.append(f"**técnico** ({tecnico})")
+    if politico > 0: parts.append(f"**político** ({politico})")
+    bullets.append(f"- Algumas categorias aparecem com baixa presença feminina: {', '.join(parts)}.")
+
+# Fallback caso não encontre as categorias específicas (por diferenças de escrita)
+if len(bullets) <= 1 and len(top) > 1:
+    top_list = ", ".join([f"**{r['categoria_cargo']}** ({int(r['total_feminino'])})" for _, r in top.iterrows()])
+    bullets.append(f"- Entre as maiores concentrações, destacam-se: {top_list}.")
+
+st.markdown("\n".join(bullets))
+st.divider()
+
+# percentual de gênero por categoria de cargo
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("""
+# Percentual de gênero por categoria
+""")
+st.markdown("<br>", unsafe_allow_html=True)
+df_unico = df.drop_duplicates(subset="id_servidor")
+
+total_categoria = (
+    df_unico.groupby("categoria_cargo")["id_servidor"]
+    .nunique()
+    .reset_index(name="total_categoria")
+)
+
+total_feminino = (
+    df_unico[df_unico["genero"] == "F"]
+    .groupby("categoria_cargo")["id_servidor"]
+    .nunique()
+    .reset_index(name="total_feminino")
+)
+
+perfil_feminino_categoria = total_categoria.merge(
+    total_feminino,
+    on="categoria_cargo",
+    how="left"
+)
+
+
+df_unico = df.drop_duplicates(subset="id_servidor").copy()
+
+# Totais por categoria
+total_categoria = (
+    df_unico.groupby("categoria_cargo")["id_servidor"]
+    .nunique()
+    .reset_index(name="total_categoria")
+)
+
+# Total feminino por categoria
+total_feminino = (
+    df_unico[df_unico["genero"] == "F"]
+    .groupby("categoria_cargo")["id_servidor"]
+    .nunique()
+    .reset_index(name="total_feminino")
+)
+
+# Perfil final por categoria (F/M + %)
+perfil = total_categoria.merge(total_feminino, on="categoria_cargo", how="left")
+
+perfil["total_feminino"] = perfil["total_feminino"].fillna(0).astype(int)
+perfil["total_masculino"] = (perfil["total_categoria"] - perfil["total_feminino"]).astype(int)
+
+perfil["percentual_feminino"] = (
+    perfil["total_feminino"] / perfil["total_categoria"] * 100
+).round(1)
+
+perfil["percentual_masculino"] = (
+    perfil["total_masculino"] / perfil["total_categoria"] * 100
+).round(1)
+
+# ordena por tamanho da categoria
+perfil = perfil.sort_values("total_categoria", ascending=False)
+
+
+DONUT_DOMAIN = ["Masculino", "Feminino"]
+DONUT_RANGE = ["#0068c9", "#e377c2"]  # azul / rosa
+
+def donut_genero_categoria(perfil_df: pd.DataFrame, categoria: str):
+    subset = perfil_df.loc[perfil_df["categoria_cargo"] == categoria]
+    if subset.empty:
+        st.warning(f"Categoria não encontrada: {categoria}")
+        return
+
+    linha = subset.iloc[0]
+
+    donut_df = pd.DataFrame({
+        "genero": ["Masculino", "Feminino"],
+        "percentual": [linha["percentual_masculino"], linha["percentual_feminino"]],
+        "total": [linha["total_masculino"], linha["total_feminino"]],
+    })
+
+    st.markdown(f"#### {categoria}")
+
+    donut = (
+        alt.Chart(donut_df)
+        .mark_arc(innerRadius=68, outerRadius=110)
+        .encode(
+            theta=alt.Theta("percentual:Q"),
+            color=alt.Color(
+                "genero:N",
+                scale=alt.Scale(domain=DONUT_DOMAIN, range=DONUT_RANGE),
+                legend=None
+            ),
+            tooltip=[
+                alt.Tooltip("genero:N", title="Gênero"),
+                alt.Tooltip("total:Q", title="Servidores"),
+                alt.Tooltip("percentual:Q", title="Percentual", format=".1f"),
+            ],
+        )
+        .properties(width=300, height=240)
+    )
+
+    # Texto central único com quebra de linha (não sobrepõe)
+    center = alt.Chart(pd.DataFrame({
+        "text": [f"{int(linha['total_categoria'])}\nservidores"]
+    })).mark_text(
+        fontSize=16,
+        fontWeight="bold",
+        lineHeight=18
+    ).encode(text="text:N")
+
+    st.altair_chart(donut + center, use_container_width=True)
+
+    st.caption(
+        f"F: {linha['percentual_feminino']:.1f}% ({int(linha['total_feminino'])}) • "
+        f"M: {linha['percentual_masculino']:.1f}% ({int(linha['total_masculino'])})"
+    )
+
+
+cats = (
+    perfil["categoria_cargo"]
+    .dropna()
+    .astype(str)
+    .unique()
+    .tolist()
+)
+
+for i in range(0, len(cats), 2):
+    col1, col2 = st.columns(2)
+
+    with col1:
+        donut_genero_categoria(perfil, cats[i])
+
+    with col2:
+        if i + 1 < len(cats):
+            donut_genero_categoria(perfil, cats[i + 1])
+        else:
+            st.empty()
+
+    st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
+
+st.divider()
