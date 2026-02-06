@@ -298,3 +298,88 @@ chart2 = (bars2 + labels_top2 + labels_center2).properties(
 
 st.altair_chart(chart2, use_container_width=True)
 st.divider()
+
+# Desligamentos do gênero feminino por categoria de cargo
+st.markdown("""
+# Desligamentos de servidores do gênero feminino por categoria
+O gráfico a seguir apresenta a distribuição dos desligamentos de servidores do gênero feminino no ano de 2025, 
+segmentado por **categoria de cargo**, considerando cada desligamento como um evento individual.
+""")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+desligamentos_fem = df[
+    (df["genero"] == "F") &
+    (df["data_desligamento"].notna()) &
+    (df["data_desligamento"].dt.year == 2025)
+]
+
+desligamento_categoria = (
+    desligamentos_fem["categoria_cargo"]
+    .value_counts()
+    .reset_index()
+)
+
+desligamento_categoria.columns = ["categoria_cargo", "total_desligamento"]
+
+# Ordenação decrescente
+desligamento_categoria = desligamento_categoria.sort_values(
+    by="total_desligamento",
+    ascending=False
+)
+
+# label só com o número absoluto
+desligamento_categoria["label"] = (
+    desligamento_categoria["total_desligamento"]
+    .astype(int)
+    .astype(str)
+)
+
+# Gráfico
+base = alt.Chart(desligamento_categoria).encode(
+    y=alt.Y(
+        "categoria_cargo:N",
+        sort="-x",
+        title=None    # Removido o título do eixo Y
+    ),
+    x=alt.X(
+        "total_desligamento:Q",
+        title="Total de desligamentos"
+    ),
+    tooltip=[
+        alt.Tooltip("categoria_cargo:N", title="Categoria"),
+        alt.Tooltip("total_desligamento:Q", title="Total"),
+    ]
+)
+
+bars = base.mark_bar(size=32)
+
+labels = base.mark_text(
+    align="left",
+    baseline="middle",
+    dx=8,
+    fontSize=14,
+    fontWeight="bold"
+).encode(
+    text="label:N"
+)
+
+chart = (bars + labels).properties(
+    height=min(600, 40 * len(desligamento_categoria) + 80)
+)
+
+st.altair_chart(chart, use_container_width=True)
+st.markdown("""
+- A categoria **Educação** concentra a ampla maioria dos desligamentos de servidoras, com **85 registros**, representando **73,91%** do total.
+- As categorias **Operacional** e **Comissionado** aparecem em seguida, ambas com **8 desligamentos** cada (**6,96%**).
+- As áreas de **Assistência Social** e **Saúde** registraram **6 desligamentos** cada, correspondendo a **5,22%** do total.
+- A categoria **Administrativo** apresentou o menor volume, com **2 desligamentos** (**1,74%**).
+
+
+Os resultados indicam que os desligamentos de servidoras em 2025 estiveram **fortemente concentrados na área da Educação**, 
+sugerindo maior rotatividade ou maior volume de vínculos nessa categoria em comparação às demais. Esse padrão pode estar associado a características 
+específicas dos cargos, como vínculos temporários, contratos por período letivo ou maior exposição a desligamentos ao longo do ano.
+
+> **Nota metodológica:** a análise considera exclusivamente desligamentos ocorridos em 2025 e inclui apenas servidoras do gênero feminino, com base na data efetiva de desligamento registrada.
+""")
+st.divider()
