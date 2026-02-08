@@ -1,3 +1,4 @@
+import textwrap
 import pandas as pd
 import altair as alt
 import streamlit as st
@@ -61,7 +62,6 @@ st.dataframe(df.head(), use_container_width=True, hide_index=True)
 
 st.divider()
 
-# Panorama geral 2025
 st.markdown("""
 <style>
 .kpi-card {
@@ -89,6 +89,9 @@ p.kpi-value {
 """, unsafe_allow_html=True)
 
 
+# ---------------------
+# Panorama Geral 2025
+# ---------------------
 st.markdown("""
 # Panorama Geral 2025
 """)
@@ -211,336 +214,23 @@ st.altair_chart(chart, use_container_width=True)
 st.divider()
 
 
-# desligamentos por genero
-st.markdown("""
-# Desligamentos de servidores por gênero em 2025
-Em 2025 foram registrados 155 desligamentos, abaixo podemos verificar o número de desligamento por gênero e suas respectivas porcentagens.
-""")
-df_desligados_2025 = df[
-    df["data_desligamento"].notna() &
-    (df["data_desligamento"].dt.year == 2025)
-]
-desligados_genero = (
-    df_desligados_2025["genero"]
-    .value_counts()
-    .loc[["F", "M"]]
-    .reset_index()
-)
-desligados_genero.columns = ["genero", "total_desligados"]
-
-total_desligado = desligados_genero["total_desligados"].sum()
-desligados_genero["percentual"] = (
-    desligados_genero["total_desligados"] / total_desligado * 100
-).round(1)
-
-desligados_genero["percentual_str"] = desligados_genero["percentual"].astype(int).astype(str) + "%"
-
-st.markdown("<br><br>", unsafe_allow_html=True)
-
-df_desligados_2025 = df[
-    df["data_desligamento"].notna() &
-    (df["data_desligamento"].dt.year == 2025)
-]
-
-desligados_genero = (
-    df_desligados_2025["genero"]
-    .value_counts()
-    .loc[["F", "M"]]
-    .reset_index()
-)
-desligados_genero.columns = ["genero", "total_desligados"]
-
-total_desligado = desligados_genero["total_desligados"].sum()
-
-desligados_genero["percentual"] = (
-    desligados_genero["total_desligados"] / total_desligado * 100
-)
-
-desligados_genero["percentual_str"] = desligados_genero["percentual"].round(1).astype(str) + "%"
-
-# Gráfico de barras
-base2 = alt.Chart(desligados_genero).encode(
-    x=alt.X("genero:N", title="Gênero", axis=alt.Axis(labelAngle=0)),
-    y=alt.Y("total_desligados:Q", title="Total de desligados")
-)
-
-bars2 = base2.mark_bar(size=90)
-
-# Número absoluto em cima
-labels_top2 = base2.mark_text(
-    dy=-8,
-    fontSize=16,
-    fontWeight="bold"
-).encode(
-    text="total_desligados:Q"
-)
-
-# Percentual dentro da barra
-labels_center2 = (
-    alt.Chart(desligados_genero)
-    .transform_calculate(y_mid="datum.total_desligados / 2")
-    .mark_text(
-        fontSize=18,
-        fontWeight="bold",
-        color="white"
-    )
-    .encode(
-        x="genero:N",
-        y="y_mid:Q",
-        text="percentual_str:N"
-    )
-)
-
-chart2 = (bars2 + labels_top2 + labels_center2).properties(
-    width=500,
-    height=350
-)
-
-st.altair_chart(chart2, use_container_width=True)
-st.divider()
-
-# Desligamentos do gênero feminino por categoria de cargo
-st.markdown("""
-# Desligamentos de servidores do gênero feminino por categoria
-O gráfico a seguir apresenta a distribuição dos desligamentos de servidores do gênero feminino no ano de 2025, 
-segmentado por **categoria de cargo**, considerando cada desligamento como um evento individual.
-""")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-desligamentos_fem = df[
-    (df["genero"] == "F") &
-    (df["data_desligamento"].notna()) &
-    (df["data_desligamento"].dt.year == 2025)
-]
-
-desligamento_categoria = (
-    desligamentos_fem["categoria_cargo"]
-    .value_counts()
-    .reset_index()
-)
-
-desligamento_categoria.columns = ["categoria_cargo", "total_desligamento"]
-
-# Ordenação decrescente
-desligamento_categoria = desligamento_categoria.sort_values(
-    by="total_desligamento",
-    ascending=False
-)
-
-# label só com o número absoluto
-desligamento_categoria["label"] = (
-    desligamento_categoria["total_desligamento"]
-    .astype(int)
-    .astype(str)
-)
-
-# Gráfico
-base = alt.Chart(desligamento_categoria).encode(
-    y=alt.Y(
-        "categoria_cargo:N",
-        sort="-x",
-        title=None    # Removido o título do eixo Y
-    ),
-    x=alt.X(
-        "total_desligamento:Q",
-        title="Total de desligamentos"
-    ),
-    tooltip=[
-        alt.Tooltip("categoria_cargo:N", title="Categoria"),
-        alt.Tooltip("total_desligamento:Q", title="Total"),
-    ]
-)
-
-bars = base.mark_bar(size=32)
-
-labels = base.mark_text(
-    align="left",
-    baseline="middle",
-    dx=8,
-    fontSize=14,
-    fontWeight="bold"
-).encode(
-    text="label:N"
-)
-
-chart = (bars + labels).properties(
-    height=min(600, 40 * len(desligamento_categoria) + 80)
-)
-
-st.altair_chart(chart, use_container_width=True)
-st.markdown("""
-- A categoria **Educação** concentra a ampla maioria dos desligamentos de servidoras, com **85 registros**, representando **73,91%** do total.
-- As categorias **Operacional** e **Comissionado** aparecem em seguida, ambas com **8 desligamentos** cada (**6,96%**).
-- As áreas de **Assistência Social** e **Saúde** registraram **6 desligamentos** cada, correspondendo a **5,22%** do total.
-- A categoria **Administrativo** apresentou o menor volume, com **2 desligamentos** (**1,74%**).
-
-
-Os resultados indicam que os desligamentos de servidoras em 2025 estiveram **fortemente concentrados na área da Educação**, 
-sugerindo maior rotatividade ou maior volume de vínculos nessa categoria em comparação às demais. Esse padrão pode estar associado a características 
-específicas dos cargos, como vínculos temporários, contratos por período letivo ou maior exposição a desligamentos ao longo do ano.
-
-> **Nota metodológica:** a análise considera exclusivamente desligamentos ocorridos em 2025 e inclui apenas servidoras do gênero feminino, com base na data efetiva de desligamento registrada.
-""")
-st.divider()
-
-
-st.markdown("""
-# Distribuição de servidores do gênero feminino por categoria
-
-O gráfico a seguir mostra a quantidade de **servidoras únicas** por categoria de cargo em 2025
-(contagem deduplicada por `id_servidor` para evitar duplicidades no dataset mensal).
-""")
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Deduplicação global (regra padrão do projeto)
-df_unico = df.drop_duplicates(subset="id_servidor")
-
-# Filtra feminino no df deduplicado
-df_fem_unico = df_unico[df_unico["genero"] == "F"]
-
-# Contagem por categoria (servidoras únicas)
-categoria_feminino = (
-    df_fem_unico.groupby("categoria_cargo")["id_servidor"]
-    .nunique()
-    .reset_index(name="total_feminino")
-    .sort_values("total_feminino", ascending=False)
-)
-
-categoria_feminino["label"] = categoria_feminino["total_feminino"].astype(int).astype(str)
-
-st.markdown("### Distribuição de servidoras por categoria de cargo")
-
-base = alt.Chart(categoria_feminino).encode(
-    y=alt.Y(
-        "categoria_cargo:N",
-        sort="-x",
-        title=None
-    ),
-    x=alt.X(
-        "total_feminino:Q",
-        title="Total de servidoras"
-    ),
-    tooltip=[
-        alt.Tooltip("categoria_cargo:N", title="Categoria"),
-        alt.Tooltip("total_feminino:Q", title="Total"),
-    ]
-)
-
-bars = base.mark_bar(size=32)
-
-labels = base.mark_text(
-    align="left",
-    baseline="middle",
-    dx=8,
-    fontSize=14,
-    fontWeight="bold"
-).encode(
-    text="label:N"
-)
-
-chart = (bars + labels).properties(
-    height=min(700, 40 * len(categoria_feminino) + 80),
-    padding={"right": 80}
-)
-
-st.altair_chart(chart, use_container_width=True)
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Narrativa dinâmica
-def get_count(df_counts, categoria):
-    row = df_counts.loc[df_counts["categoria_cargo"] == categoria, "total_feminino"]
-    return int(row.iloc[0]) if len(row) else 0
-
-# Top 5 categorias (se existirem)
-top = categoria_feminino.head(5).copy()
-
-# Puxa algumas categorias específicas
-educ = get_count(categoria_feminino, "educacao")
-saude = get_count(categoria_feminino, "saude")
-operacional = get_count(categoria_feminino, "operacional")
-administrativo = get_count(categoria_feminino, "administrativo")
-assist = get_count(categoria_feminino, "assistencia_social")
-comiss = get_count(categoria_feminino, "comissionado")
-cultura = get_count(categoria_feminino, "cultura")
-tecnico = get_count(categoria_feminino, "tecnico")
-politico = get_count(categoria_feminino, "politico")
-
-st.markdown("Observa-se que:")
-
-bullets = []
-
-# Destaque: categoria líder (top 1)
-if not categoria_feminino.empty:
-    top1 = categoria_feminino.iloc[0]
-    bullets.append(
-        f"- A categoria **{top1['categoria_cargo']}** concentra o maior número de servidoras, com **{int(top1['total_feminino'])}**."
-    )
-
-# Destaques adicionais (se existirem)
-if saude > 0:
-    bullets.append(f"- A área de **saúde** aparece com **{saude}** servidoras.")
-if operacional > 0:
-    bullets.append(f"- A categoria **operacional** soma **{operacional}** servidoras.")
-if administrativo > 0:
-    bullets.append(f"- Em **administrativo**, há **{administrativo}** servidoras.")
-if assist > 0:
-    bullets.append(f"- Em **assistência social**, há **{assist}** servidoras.")
-if comiss > 0:
-    bullets.append(f"- Nos cargos **comissionados**, foram identificadas **{comiss}** servidoras.")
-if cultura > 0 or tecnico > 0 or politico > 0:
-    parts = []
-    if cultura > 0: parts.append(f"**cultura** ({cultura})")
-    if tecnico > 0: parts.append(f"**técnico** ({tecnico})")
-    if politico > 0: parts.append(f"**político** ({politico})")
-    bullets.append(f"- Algumas categorias aparecem com baixa presença feminina: {', '.join(parts)}.")
-
-# Fallback caso não encontre as categorias específicas (por diferenças de escrita)
-if len(bullets) <= 1 and len(top) > 1:
-    top_list = ", ".join([f"**{r['categoria_cargo']}** ({int(r['total_feminino'])})" for _, r in top.iterrows()])
-    bullets.append(f"- Entre as maiores concentrações, destacam-se: {top_list}.")
-
-st.markdown("\n".join(bullets))
-st.divider()
-
+# ---------------------------------------------
 # percentual de gênero por categoria de cargo
-st.markdown("<br>", unsafe_allow_html=True)
+# ---------------------------------------------
 st.markdown("""
 # Percentual de gênero por categoria
 """)
 st.markdown("<br>", unsafe_allow_html=True)
-df_unico = df.drop_duplicates(subset="id_servidor")
 
-total_categoria = (
-    df_unico.groupby("categoria_cargo")["id_servidor"]
-    .nunique()
-    .reset_index(name="total_categoria")
-)
-
-total_feminino = (
-    df_unico[df_unico["genero"] == "F"]
-    .groupby("categoria_cargo")["id_servidor"]
-    .nunique()
-    .reset_index(name="total_feminino")
-)
-
-perfil_feminino_categoria = total_categoria.merge(
-    total_feminino,
-    on="categoria_cargo",
-    how="left"
-)
-
-
+# Dedup global + perfil por categoria
 df_unico = df.drop_duplicates(subset="id_servidor").copy()
 
-# Totais por categoria
 total_categoria = (
     df_unico.groupby("categoria_cargo")["id_servidor"]
     .nunique()
     .reset_index(name="total_categoria")
 )
 
-# Total feminino por categoria
 total_feminino = (
     df_unico[df_unico["genero"] == "F"]
     .groupby("categoria_cargo")["id_servidor"]
@@ -548,7 +238,6 @@ total_feminino = (
     .reset_index(name="total_feminino")
 )
 
-# Perfil final por categoria (F/M + %)
 perfil = total_categoria.merge(total_feminino, on="categoria_cargo", how="left")
 
 perfil["total_feminino"] = perfil["total_feminino"].fillna(0).astype(int)
@@ -562,10 +251,31 @@ perfil["percentual_masculino"] = (
     perfil["total_masculino"] / perfil["total_categoria"] * 100
 ).round(1)
 
-# ordena por tamanho da categoria
+# Ordena por tamanho da categoria (opcional)
 perfil = perfil.sort_values("total_categoria", ascending=False)
 
+# Mapa de nomes
+NOME_CATEGORIA = {
+    "operacional": "Operacional",
+    "educacao": "Educação",
+    "saude": "Saúde",
+    "administrativo": "Administrativo",
+    "comissionado": "Comissionado",
+    "assistencia_social": "Assistência Social",
+    "tecnico": "Técnico",
+    "cultura": "Cultura",
+    "politico": "Político",
+    "juridico": "Jurídico",
+}
 
+def formatar_categoria(cat: str) -> str:
+    cat = str(cat).strip()
+    return NOME_CATEGORIA.get(cat, cat)  # fallback: mantém original se não estiver no mapa
+
+def servidor_singular_plural(n: int) -> str:
+    return "servidor" if int(n) == 1 else "servidores"
+
+# 3) Donut function
 DONUT_DOMAIN = ["Masculino", "Feminino"]
 DONUT_RANGE = ["#0068c9", "#e377c2"]  # azul / rosa
 
@@ -576,6 +286,7 @@ def donut_genero_categoria(perfil_df: pd.DataFrame, categoria: str):
         return
 
     linha = subset.iloc[0]
+    categoria_fmt = formatar_categoria(categoria)
 
     donut_df = pd.DataFrame({
         "genero": ["Masculino", "Feminino"],
@@ -583,7 +294,7 @@ def donut_genero_categoria(perfil_df: pd.DataFrame, categoria: str):
         "total": [linha["total_masculino"], linha["total_feminino"]],
     })
 
-    st.markdown(f"#### {categoria}")
+    st.markdown(f"#### {categoria_fmt}")
 
     donut = (
         alt.Chart(donut_df)
@@ -604,10 +315,11 @@ def donut_genero_categoria(perfil_df: pd.DataFrame, categoria: str):
         .properties(width=300, height=240)
     )
 
-    # Texto central único com quebra de linha (não sobrepõe)
-    center = alt.Chart(pd.DataFrame({
-        "text": [f"{int(linha['total_categoria'])}\nservidores"]
-    })).mark_text(
+    total_cat = int(linha["total_categoria"])
+    center_text = f"{total_cat}\n{servidor_singular_plural(total_cat)}"
+
+    # Texto central único com plural correto (sem sobreposição)
+    center = alt.Chart(pd.DataFrame({"text": [center_text]})).mark_text(
         fontSize=16,
         fontWeight="bold",
         lineHeight=18
@@ -620,7 +332,7 @@ def donut_genero_categoria(perfil_df: pd.DataFrame, categoria: str):
         f"M: {linha['percentual_masculino']:.1f}% ({int(linha['total_masculino'])})"
     )
 
-
+# Render 2 por linha (usando as categorias do perfil)
 cats = (
     perfil["categoria_cargo"]
     .dropna()
@@ -643,4 +355,184 @@ for i in range(0, len(cats), 2):
 
     st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
 
+st.divider()
+
+
+
+#------------------------------------
+# Top 10 salários mulheres e homens
+#------------------------------------
+
+st.markdown("""
+# Os 10 maiores salários por gênero
+""")
+st.markdown("<br>", unsafe_allow_html=True)
+
+st.markdown("""
+<h3 style='text-align: center;'>10 maiores salários gênero masculino</h3>
+""", unsafe_allow_html=True)
+
+df_base_masc = df.copy()
+df_masc_salario = df_base_masc[
+    (df_base_masc["genero"] == "M") &
+    (df_base_masc["tipo_pagamento"] == "folha_mensal")
+]
+
+top_10_salarios_masc = (
+    df_masc_salario
+    .groupby("cargo")["proventos"]
+    .max()
+    .reset_index(name="salario_maximo")
+    .sort_values("salario_maximo", ascending=False)
+)
+top_10_salarios_masc = top_10_salarios_masc.head(10)
+
+top_10_salarios_masc["salario_str"] = top_10_salarios_masc["salario_maximo"].apply(
+    lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+)
+
+
+# Garantir índice limpo e criar ranking (1 a 10)
+top_10_salarios_masc = top_10_salarios_masc.reset_index(drop=True).copy()
+top_10_salarios_masc["rank"] = top_10_salarios_masc.index + 1
+top_10_salarios_masc["rank_label"] = top_10_salarios_masc["rank"].astype(str) + "º"
+
+# Folga no eixo X para não cortar o label do salário
+max_sal = float(top_10_salarios_masc["salario_maximo"].max())
+
+base = alt.Chart(top_10_salarios_masc).encode(
+    y=alt.Y(
+        "rank_label:N",
+        sort=alt.SortField(field="rank", order="ascending"),
+        title=None,
+        axis=alt.Axis(labelAngle=0)
+    ),
+    x=alt.X(
+        "salario_maximo:Q",
+        title="Salário base (R$)",
+        scale=alt.Scale(domain=[0, max_sal * 1.12])
+    ),
+    tooltip=[
+        alt.Tooltip("rank:Q", title="Rank"),
+        alt.Tooltip("cargo:N", title="Cargo (completo)"),
+        alt.Tooltip("salario_str:N", title="Salário Máximo"),
+    ]
+)
+
+bars = base.mark_bar(size=26, color="#0068c9")
+
+labels = base.mark_text(
+    align="left",
+    baseline="middle",
+    dx=10,
+    fontSize=14,
+    fontWeight="bold"
+).encode(
+    text="salario_str:N"
+)
+
+chart = (bars + labels).properties(
+    width=720,
+    height=430,
+    padding={"right": 10}
+)
+
+st.altair_chart(chart, use_container_width=True)
+
+st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+st.markdown("**Cargos (por ordem do ranking):**")
+
+for _, row in top_10_salarios_masc.iterrows():
+    st.caption(f"**{int(row['rank'])}º** — {row['cargo']}")
+
+st.markdown("""
+- Cargo(s) com final .c refere-se a cargo comissionado/confiança.
+""")
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ----------------------------
+# 1) Top 10 salários feminino
+# ----------------------------
+df_base_fem = df.copy()
+
+df_fem_salario = df_base_fem[
+    (df_base_fem["genero"] == "F") &
+    (df_base_fem["tipo_pagamento"] == "folha_mensal")
+]
+
+top_10_salarios_fem = (
+    df_fem_salario
+    .groupby("cargo")["proventos"]
+    .max()
+    .reset_index(name="salario_maximo")
+    .sort_values("salario_maximo", ascending=False)
+    .head(10)
+    .reset_index(drop=True)
+)
+
+# Ranking (1 a 10)
+top_10_salarios_fem["rank"] = top_10_salarios_fem.index + 1
+top_10_salarios_fem["rank_label"] = top_10_salarios_fem["rank"].astype(str) + "º"
+
+# Formatação BR do salário
+top_10_salarios_fem["salario_str"] = top_10_salarios_fem["salario_maximo"].apply(
+    lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+)
+
+st.markdown(
+    "<h3 style='text-align: center;'>10 maiores salários gênero feminino</h3>",
+    unsafe_allow_html=True
+)
+
+max_sal = float(top_10_salarios_fem["salario_maximo"].max())
+
+base = alt.Chart(top_10_salarios_fem).encode(
+    y=alt.Y(
+        "rank_label:N",
+        sort=alt.SortField(field="rank", order="ascending"),
+        title=None,
+        axis=alt.Axis(labelAngle=0)
+    ),
+    x=alt.X(
+        "salario_maximo:Q",
+        title="Salário base (R$)",
+        scale=alt.Scale(domain=[0, max_sal * 1.12])  # folga para não cortar labels
+    ),
+    tooltip=[
+        alt.Tooltip("rank:Q", title="Rank"),
+        alt.Tooltip("cargo:N", title="Cargo (completo)"),
+        alt.Tooltip("salario_str:N", title="Salário Máximo"),
+    ]
+)
+
+bars = base.mark_bar(size=26, color="#e377c2")
+
+labels = base.mark_text(
+    align="left",
+    baseline="middle",
+    dx=10,
+    fontSize=14,
+    fontWeight="bold"
+).encode(
+    text="salario_str:N"
+)
+
+chart = (bars + labels).properties(
+    width=720,
+    height=430,
+    padding={"right": 10}
+)
+
+st.altair_chart(chart, use_container_width=True)
+
+
+st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+st.markdown("**Cargos (por ordem do ranking):**")
+
+for _, row in top_10_salarios_fem.iterrows():
+    st.caption(f"**{int(row['rank'])}º** — {row['cargo']}")
+
+st.markdown("""
+- Cargo(s) com final .c refere-se a cargo comissionado/confiança.
+""")
 st.divider()
