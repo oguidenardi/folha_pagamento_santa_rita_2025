@@ -1,4 +1,3 @@
-import textwrap
 import pandas as pd
 import altair as alt
 import streamlit as st
@@ -270,14 +269,14 @@ NOME_CATEGORIA = {
 
 def formatar_categoria(cat: str) -> str:
     cat = str(cat).strip()
-    return NOME_CATEGORIA.get(cat, cat)  # fallback: mantém original se não estiver no mapa
+    return NOME_CATEGORIA.get(cat, cat)
 
 def servidor_singular_plural(n: int) -> str:
     return "servidor" if int(n) == 1 else "servidores"
 
-# 3) Donut function
+# Donut function
 DONUT_DOMAIN = ["Masculino", "Feminino"]
-DONUT_RANGE = ["#0068c9", "#e377c2"]  # azul / rosa
+DONUT_RANGE = ["#0068c9", "#e377c2"]
 
 def donut_genero_categoria(perfil_df: pd.DataFrame, categoria: str):
     subset = perfil_df.loc[perfil_df["categoria_cargo"] == categoria]
@@ -358,6 +357,107 @@ for i in range(0, len(cats), 2):
 st.divider()
 
 
+
+# --------------------------
+# Custo anual por categoria
+# --------------------------
+
+st.markdown("""
+# Custo anual por categoria
+            
+Esta análise apresenta o custo total da prefeitura com servidores públicos ao longo de 2025,
+agrupado por categoria de cargo, considerando **todos os tipos de pagamento disponíveis na base**, incluindo:
+
+- Salário base
+- Vale-alimentação  
+- Adiantamento do 13º salário  
+- Fechamento do 13º salário  
+- Rescisões  
+- Folhas complementares com encargos
+""")
+st.markdown("<br>", unsafe_allow_html=True)
+custo_anual_categoria = (
+    df.groupby("categoria_cargo")["proventos"]
+    .sum()
+    .reset_index(name="custo_folha_anual_categoria")
+    .sort_values("custo_folha_anual_categoria", ascending=False)
+    .reset_index(drop=False)
+)
+
+custo = custo_anual_categoria.copy()
+
+total_geral = custo["custo_folha_anual_categoria"].sum()
+
+custo["percentual"] = (custo["custo_folha_anual_categoria"] / total_geral * 100).round(2)
+
+def brl_label(v):
+    if v >= 1_000_000:
+        return f"R$ {v/1_000_000:.1f} mi"
+    return f"R$ {v/1_000:.0f} mil"
+
+custo["valor_str"] = custo["custo_folha_anual_categoria"].apply(brl_label)
+custo["label"] = custo["valor_str"] + " (" + custo["percentual"].map(lambda x: f"{x:.1f}%") + ")"
+
+
+max_v = float(custo["custo_folha_anual_categoria"].max())
+
+base = alt.Chart(custo).encode(
+    y=alt.Y(
+        "categoria_cargo:N",
+        sort="-x",
+        title=None,
+        axis=alt.Axis(labelLimit=0)  # não truncar nomes (se precisar, depois a gente faz wrap)
+    ),
+    x=alt.X(
+        "custo_folha_anual_categoria:Q",
+        title="Custo total anual (R$)",
+        axis=alt.Axis(format="~s"),  # exibe 1M, 2M, etc (apoio visual)
+        scale=alt.Scale(domain=[0, max_v * 1.18])  # folga para não cortar labels
+    ),
+    tooltip=[
+        alt.Tooltip("categoria_cargo:N", title="Categoria"),
+        alt.Tooltip("valor_str:N", title="Custo anual"),
+        alt.Tooltip("percentual:Q", title="% do total", format=".1f"),
+    ]
+)
+
+bars = base.mark_bar(size=28)
+
+labels = base.mark_text(
+    align="left",
+    baseline="middle",
+    dx=10,
+    fontSize=14,
+    fontWeight="bold"
+).encode(
+    text="label:N"
+)
+
+chart = (bars + labels).properties(
+    width=760,
+    height=min(700, 38 * len(custo) + 80),
+    padding={"right": 20},
+    title=alt.TitleParams(
+        text="Custo Anual Por Categoria",
+        anchor="middle",
+        fontSize=16,
+        fontWeight="bold",
+        offset=12
+    )
+)
+
+st.altair_chart(chart, use_container_width=True)
+st.markdown("""
+- **Educação, Saúde e Operacional** concentram a maior parte das despesas anuais, representando
+a espinha dorsal dos serviços públicos essenciais.
+- Áreas como **Cultura, Jurídico e Técnico** possuem impacto financeiro significativamente menor,
+tanto por menor número de servidores quanto pela estrutura salarial típica dessas funções.
+- A análise evidencia como determinadas categorias — independentemente de salário médio —
+carregam grande peso orçamentário devido ao seu **volume de servidores**.
+- É possível observar a importância de separar o impacto de categorias com muitos servidores
+(Operacional, Educação) das categorias com salários médios mais elevados, porém menor quadro funcional.
+""")
+st.divider()
 
 #------------------------------------
 # Top 10 salários mulheres e homens
@@ -451,7 +551,7 @@ st.markdown("""
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ----------------------------
-# 1) Top 10 salários feminino
+# Top 10 salários feminino
 # ----------------------------
 df_base_fem = df.copy()
 
