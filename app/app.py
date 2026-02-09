@@ -459,12 +459,120 @@ carregam grande peso orçamentário devido ao seu **volume de servidores**.
 """)
 st.divider()
 
+# -----------------------
+# Top 10 salários geral
+# -----------------------
+st.markdown("""
+# Os maiores salários de 2025
+
+Um levantamento realizado a partir dos dados oficiais de **folha mensal da Prefeitura** revela quais são 
+os **10 maiores salários pagos ao longo de 2025**. A lista, composta por diferentes áreas da administração, 
+mostra um cenário marcado sobretudo pela presença da **Saúde**, do **Jurídico** e do **alto escalão do Executivo**.
+
+O topo do ranking é dominado pela área da **Saúde**, com três cargos de **Médico PSF** ocupando as três primeiras 
+colocações — dois profissionais do gênero masculino e uma profissional do gênero feminino. 
+Logo depois, na **4ª posição**, aparece o cargo de **Procurador Geral do Município**, exercido por uma servidora mulher.
+
+Na sequência, a **5ª posição** é ocupada pelo **Prefeito**, único cargo eletivo da lista. 
+O setor jurídico volta a aparecer na **6ª colocação**, com o cargo de **Procurador Jurídico**, desempenhado por um servidor homem.
+
+O ranking também inclui duas posições de **Agente Administrativo**, nos **7º e 9º lugares**, 
+exercidas por uma mulher e um homem, respectivamente — mostrando que, embora seja uma função administrativa, 
+há casos em que o salário alcança valores elevados dentro da estrutura municipal.
+
+Já a **8ª posição** é ocupada por um **Médico** (fora da categoria PSF), reforçando novamente o peso 
+da área da Saúde entre as maiores remunerações. O grupo se encerra com o cargo de **Veterinário**, que ocupa o **10º lugar**, 
+também desempenhado por um servidor homem.
+
+""")
+st.markdown("<br> <br>", unsafe_allow_html=True)
+
+df_mensal = df[df["tipo_pagamento"] == "folha_mensal"].copy()
+
+df_mensal_unico = df_mensal.drop_duplicates(
+    subset=["id_servidor", "cargo"],
+    keep="last"
+)
+
+top_10_salarios_geral = (
+    df_mensal_unico.groupby(["id_servidor", "cargo", "genero"])["proventos"]
+    .max()
+    .reset_index(name="salario_maximo")
+    .sort_values("salario_maximo", ascending=False)
+    .head(10)
+    .reset_index(drop=True)
+)
+
+top_10_salarios_geral["salario_str"] = top_10_salarios_geral["salario_maximo"].apply(
+    lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+)
+
+top_10_salarios_geral = top_10_salarios_geral.copy()
+top_10_salarios_geral["salario_maximo"] = pd.to_numeric(top_10_salarios_geral["salario_maximo"], errors="coerce")
+top_10_salarios_geral = top_10_salarios_geral.dropna(subset=["salario_maximo"]).reset_index(drop=True)
+
+
+top_10_salarios_geral["rank"] = (top_10_salarios_geral.index + 1).astype(int)
+top_10_salarios_geral["rank_label"] = top_10_salarios_geral["rank"].astype(str) + "º"
+
+max_sal = float(top_10_salarios_geral["salario_maximo"].max())
+
+base = alt.Chart(top_10_salarios_geral).encode(
+    y=alt.Y(
+        "rank_label:N",
+        sort=alt.SortField(field="rank", order="ascending"),
+        title=None,
+        axis=alt.Axis(labelAngle=0)
+    ),
+    x=alt.X(
+        "salario_maximo:Q",
+        title="Salário base (R$)",
+        scale=alt.Scale(domain=[0, max_sal * 1.12])  # folga para rótulos
+    ),
+    tooltip=[
+        alt.Tooltip("rank:Q", title="Rank"),
+        alt.Tooltip("cargo:N", title="Cargo (completo)"),
+        alt.Tooltip("genero:N", title="Gênero"),
+        alt.Tooltip("salario_str:N", title="Salário Máximo"),
+        alt.Tooltip("id_servidor:N", title="ID (anon.)"),
+    ]
+)
+
+bars = base.mark_bar(size=26, color="#0068c9")
+
+labels = base.mark_text(
+    align="left",
+    baseline="middle",
+    dx=10,
+    fontSize=14,
+    fontWeight="bold"
+).encode(
+    text="salario_str:N"
+)
+
+chart = (bars + labels).properties(
+    width=720,
+    height=430,
+    padding={"right": 20},
+    title=alt.TitleParams(
+        text="10 maiores salários da Prefeitura em 2025",
+        anchor="middle",
+        fontSize=16,
+        fontWeight="bold",
+        offset=12
+    )
+)
+
+st.altair_chart(chart, use_container_width=True)
+
+
+
 #------------------------------------
 # Top 10 salários mulheres e homens
 #------------------------------------
 
 st.markdown("""
-# Os 10 maiores salários por gênero
+## Os 10 maiores salários por gênero
 """)
 st.markdown("<br>", unsafe_allow_html=True)
 
