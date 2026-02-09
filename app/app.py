@@ -568,47 +568,75 @@ st.altair_chart(chart, use_container_width=True)
 
 
 #------------------------------------
-# Top 10 salários mulheres e homens
+# Top 10 salários homens
 #------------------------------------
 
 st.markdown("""
 ## Os 10 maiores salários por gênero
+
+### 10 maiores salários gênero masculino
+
+Os dados da folha mensal de 2025 mostram que os maiores salários entre servidores homens estão concentrados principalmente na **Saúde**, no **Executivo** e no **Jurídico**.
+
+No topo do ranking aparecem dois **Médicos do PSF**, que ocupam a **1ª e 2ª posições**, seguidos pelo **Prefeito** na **3ª colocação** — único cargo eletivo da lista.
+
+A **4ª posição** é do **Procurador Jurídico**, responsável pela representação legal do município. Em **5º lugar**, surge mais um **Médico**, fora da estrutura do PSF.
+
+O cargo de **Agente Administrativo** aparece duas vezes, nas **6ª e 9ª posições**, mostrando que, em alguns casos, funções administrativas também alcançam remunerações elevadas.
+
+Em **7º lugar**, está o **Veterinário**, evidenciando o peso de áreas técnicas especializadas. Já a **8ª posição** fica com o **Médico de Pronto Atendimento**, essencial nos serviços de urgência.
+
+O ranking se encerra com outro **Médico** na **10ª posição**, reforçando que a Saúde domina a maior parte das remunerações mais altas entre servidores do gênero masculino em 2025.
+
 """)
 st.markdown("<br>", unsafe_allow_html=True)
 
-st.markdown("""
-<h3 style='text-align: center;'>10 maiores salários gênero masculino</h3>
-""", unsafe_allow_html=True)
+# Filtrar folha mensal + genero
+df_mensal_masc = df[
+    (df["tipo_pagamento"] == "folha_mensal") &
+    (df["genero"] == "M")
+].copy()
 
-df_base_masc = df.copy()
-df_masc_salario = df_base_masc[
-    (df_base_masc["genero"] == "M") &
-    (df_base_masc["tipo_pagamento"] == "folha_mensal")
-]
+# Remover duplicações do mesmo servidor/cargo
+df_mensal_masc_unico = df_mensal_masc.drop_duplicates(
+    subset=["id_servidor", "cargo"],
+    keep="last"
+)
 
+# Calculando maior salário mensal por servidor
 top_10_salarios_masc = (
-    df_masc_salario
-    .groupby("cargo")["proventos"]
+    df_mensal_masc_unico
+    .groupby(["id_servidor", "cargo"])["proventos"]
     .max()
     .reset_index(name="salario_maximo")
     .sort_values("salario_maximo", ascending=False)
+    .head(10)
+    .reset_index(drop=True)
 )
-top_10_salarios_masc = top_10_salarios_masc.head(10)
 
+# Criando coluna com salário formatado (BRL)
 top_10_salarios_masc["salario_str"] = top_10_salarios_masc["salario_maximo"].apply(
     lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 )
 
-
-# Garantir índice limpo e criar ranking (1 a 10)
-top_10_salarios_masc = top_10_salarios_masc.reset_index(drop=True).copy()
+# Adicionando ranking numérico
 top_10_salarios_masc["rank"] = top_10_salarios_masc.index + 1
 top_10_salarios_masc["rank_label"] = top_10_salarios_masc["rank"].astype(str) + "º"
 
-# Folga no eixo X para não cortar o label do salário
-max_sal = float(top_10_salarios_masc["salario_maximo"].max())
+# Sanitização rápida para evitar "undefined"
+df_plot = top_10_salarios_masc.copy()
+df_plot["salario_maximo"] = pd.to_numeric(df_plot["salario_maximo"], errors="coerce")
+df_plot = df_plot.dropna(subset=["salario_maximo"]).reset_index(drop=True)
 
-base = alt.Chart(top_10_salarios_masc).encode(
+# Garante rank (caso ainda não tenha)
+if "rank" not in df_plot.columns:
+    df_plot["rank"] = (df_plot.index + 1).astype(int)
+if "rank_label" not in df_plot.columns:
+    df_plot["rank_label"] = df_plot["rank"].astype(str) + "º"
+
+max_sal = float(df_plot["salario_maximo"].max())
+
+base = alt.Chart(df_plot).encode(
     y=alt.Y(
         "rank_label:N",
         sort=alt.SortField(field="rank", order="ascending"),
@@ -624,6 +652,7 @@ base = alt.Chart(top_10_salarios_masc).encode(
         alt.Tooltip("rank:Q", title="Rank"),
         alt.Tooltip("cargo:N", title="Cargo (completo)"),
         alt.Tooltip("salario_str:N", title="Salário Máximo"),
+        alt.Tooltip("id_servidor:N", title="ID (anon.)") if "id_servidor" in df_plot.columns else alt.value(None),
     ]
 )
 
@@ -642,35 +671,65 @@ labels = base.mark_text(
 chart = (bars + labels).properties(
     width=720,
     height=430,
-    padding={"right": 10}
+    padding={"right": 20},
+    title=alt.TitleParams(
+        text="10 maiores salários da Prefeitura em 2025 - Gênero Masculino",
+        anchor="middle",
+        fontSize=16,
+        fontWeight="bold",
+        offset=12
+
+    )
 )
 
 st.altair_chart(chart, use_container_width=True)
 
+# Legenda editorial
 st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 st.markdown("**Cargos (por ordem do ranking):**")
 
-for _, row in top_10_salarios_masc.iterrows():
+for _, row in df_plot.iterrows():
     st.caption(f"**{int(row['rank'])}º** — {row['cargo']}")
 
-st.markdown("""
-- Cargo(s) com final .c refere-se a cargo comissionado/confiança.
-""")
-st.markdown("<br>", unsafe_allow_html=True)
 
 # ----------------------------
 # Top 10 salários feminino
 # ----------------------------
-df_base_fem = df.copy()
+st.markdown("""
+### 10 maiores salários gênero feminino
 
-df_fem_salario = df_base_fem[
-    (df_base_fem["genero"] == "F") &
-    (df_base_fem["tipo_pagamento"] == "folha_mensal")
-]
+Os dados da folha mensal de 2025 mostram que os maiores salários entre servidoras estão 
+concentrados principalmente na **Saúde**, no **Jurídico** e na **Educação**.
 
+A **1ª posição** é ocupada por uma **Médica do PSF**, seguida na **2ª colocação** pela **Procuradora Geral do Município**, 
+o mais alto cargo jurídico da administração.
+
+O **3º lugar** fica com uma **Agente Administrativa**, indicando que funções de apoio também alcançam salários relevantes.
+
+Da **4ª à 9ª posição**, o ranking é dominado pelo cargo de **Professora**, reforçando a forte presença feminina na Educação e
+a importância da categoria dentro do funcionalismo.
+
+Fechando a lista, na **10ª posição**, aparece uma **Médica Pediatra**, destacando novamente a área da Saúde entre as maiores remunerações femininas de 2025.
+
+""")
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Filtrar folha mensal e gênero
+df_mensal_fem = df[
+    (df["tipo_pagamento"] == "folha_mensal") &
+    (df["genero"] == "F")
+].copy()
+
+# Remover duplicações do mesmo servidor/cargo
+df_mensal_fem_unico = df_mensal_fem.drop_duplicates(
+    subset=["id_servidor", "cargo"],
+    keep="last"
+)
+
+# Calculando maior salário mensal por servidor
 top_10_salarios_fem = (
-    df_fem_salario
-    .groupby("cargo")["proventos"]
+    df_mensal_fem_unico
+    .groupby(["id_servidor", "cargo"])["proventos"]
     .max()
     .reset_index(name="salario_maximo")
     .sort_values("salario_maximo", ascending=False)
@@ -678,23 +737,29 @@ top_10_salarios_fem = (
     .reset_index(drop=True)
 )
 
-# Ranking (1 a 10)
-top_10_salarios_fem["rank"] = top_10_salarios_fem.index + 1
-top_10_salarios_fem["rank_label"] = top_10_salarios_fem["rank"].astype(str) + "º"
-
-# Formatação BR do salário
+# Criando coluna com salário formatado (BRL)
 top_10_salarios_fem["salario_str"] = top_10_salarios_fem["salario_maximo"].apply(
     lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 )
 
-st.markdown(
-    "<h3 style='text-align: center;'>10 maiores salários gênero feminino</h3>",
-    unsafe_allow_html=True
-)
+# Adicionando ranking numérico
+top_10_salarios_fem["rank"] = top_10_salarios_fem.index + 1
+top_10_salarios_fem["rank_label"] = top_10_salarios_fem["rank"].astype(str) + "º"
 
-max_sal = float(top_10_salarios_fem["salario_maximo"].max())
+# Sanitização rápida para evitar undefined
+df_plot_fem = top_10_salarios_fem.copy()
+df_plot_fem["salario_maximo"] = pd.to_numeric(df_plot["salario_maximo"], errors="coerce")
+df_plot_fem = df_plot_fem.dropna(subset=["salario_maximo"]).reset_index(drop=True)
 
-base = alt.Chart(top_10_salarios_fem).encode(
+# Garante rank (caso ainda não tenha)
+if "rank" not in df_plot_fem.columns:
+    df_plot["rank"] = (df_plot_fem.index + 1).astype(int)
+if "rank_label" not in df_plot_fem.columns:
+    df_plot["rank_label"] = df_plot_fem["rank"].astype(str) + "º"
+
+max_sal = float(df_plot_fem["salario_maximo"].max())
+
+base = alt.Chart(df_plot_fem).encode(
     y=alt.Y(
         "rank_label:N",
         sort=alt.SortField(field="rank", order="ascending"),
@@ -704,12 +769,13 @@ base = alt.Chart(top_10_salarios_fem).encode(
     x=alt.X(
         "salario_maximo:Q",
         title="Salário base (R$)",
-        scale=alt.Scale(domain=[0, max_sal * 1.12])  # folga para não cortar labels
+        scale=alt.Scale(domain=[0, max_sal * 1.12])
     ),
     tooltip=[
         alt.Tooltip("rank:Q", title="Rank"),
         alt.Tooltip("cargo:N", title="Cargo (completo)"),
         alt.Tooltip("salario_str:N", title="Salário Máximo"),
+        alt.Tooltip("id_servidor:N", title="ID (anon.)") if "id_servidor" in df_plot.columns else alt.value(None),
     ]
 )
 
@@ -728,19 +794,41 @@ labels = base.mark_text(
 chart = (bars + labels).properties(
     width=720,
     height=430,
-    padding={"right": 10}
+    padding={"right": 20},
+    title=alt.TitleParams(
+        text="10 maiores salários da Prefeitura em 2025 - Gênero Feminino",
+        anchor="middle",
+        fontSize=16,
+        fontWeight="bold",
+        offset=12
+
+    )
 )
 
 st.altair_chart(chart, use_container_width=True)
 
-
 st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 st.markdown("**Cargos (por ordem do ranking):**")
 
-for _, row in top_10_salarios_fem.iterrows():
+for _, row in df_plot_fem.iterrows():
     st.caption(f"**{int(row['rank'])}º** — {row['cargo']}")
 
+st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("""
-- Cargo(s) com final .c refere-se a cargo comissionado/confiança.
+#### Conclusão:
+A análise dos maiores salários pagos pela Prefeitura em 2025 mostra um padrão claro na estrutura de remunerações do município. 
+A **área da Saúde** concentra boa parte dos valores mais altos, com diferentes especialidades médicas presentes tanto no ranking geral quanto 
+nas listas específicas de homens e mulheres. O **Jurídico** e o **Executivo** também aparecem como setores de destaque, 
+refletindo a relevância institucional desses cargos.
+
+Entre os homens, a Saúde domina as primeiras posições, seguida por funções de comando e atuação jurídica. 
+Já entre as mulheres, os maiores salários se distribuem entre a Saúde, o Jurídico e principalmente a **Educação**, 
+onde o cargo de Professora aparece de forma recorrente.
+
+No ranking geral, a presença masculina é maior, mas os dados mostram que **as servidoras também ocupam posições estratégicas e 
+de alta responsabilidade**, como Procuradora Geral e Médica PSF. 
+
+Em resumo, os maiores salários de 2025 refletem áreas essenciais para o funcionamento da administração pública — 
+Saúde, Educação, Jurídico e Executivo — evidenciando como cada uma delas contribui para a manutenção dos serviços prestados à população.
 """)
 st.divider()
