@@ -221,9 +221,48 @@ st.markdown("""
 """)
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Dedup global + perfil por categoria
-df_unico = df.drop_duplicates(subset="id_servidor").copy()
+df_base = df.copy()
 
+# Flag comissionado por LINHA (robusta a NaN e espaços)
+df_base["is_comissionado"] = (
+    df_base["cargo"]
+    .fillna("")
+    .astype(str)
+    .str.strip()
+    .str.lower()
+    .str.endswith(".c")
+)
+
+# Helper: primeiro valor não nulo
+def first_notna(s: pd.Series):
+    s = s.dropna()
+    return s.iloc[0] if len(s) else None
+
+df_unico = (
+    df_base.groupby("id_servidor", as_index=False)
+    .agg(
+        genero=("genero", first_notna),
+        categoria_cargo=("categoria_cargo", first_notna),
+        is_comissionado=("is_comissionado", "any"),
+    )
+)
+
+# Se ANY ".c" => categoria vira comissionado (regra por servidor)
+df_unico.loc[df_unico["is_comissionado"], "categoria_cargo"] = "comissionado"
+
+# padroniza categoria para evitar inconsistências de casing/espaço
+df_unico["categoria_cargo"] = (
+    df_unico["categoria_cargo"]
+    .astype(str)
+    .str.strip()
+    .str.lower()
+    .replace({"nan": None})
+)
+
+# Remove a coluna auxiliar
+df_unico = df_unico.drop(columns=["is_comissionado"])
+
+# Agregações por categoria
 total_categoria = (
     df_unico.groupby("categoria_cargo")["id_servidor"]
     .nunique()
@@ -242,18 +281,21 @@ perfil = total_categoria.merge(total_feminino, on="categoria_cargo", how="left")
 perfil["total_feminino"] = perfil["total_feminino"].fillna(0).astype(int)
 perfil["total_masculino"] = (perfil["total_categoria"] - perfil["total_feminino"]).astype(int)
 
+# evita divisão por zero
 perfil["percentual_feminino"] = (
-    perfil["total_feminino"] / perfil["total_categoria"] * 100
-).round(1)
+    (perfil["total_feminino"] / perfil["total_categoria"].replace({0: pd.NA})) * 100
+).round(1).fillna(0.0)
 
 perfil["percentual_masculino"] = (
-    perfil["total_masculino"] / perfil["total_categoria"] * 100
-).round(1)
+    (perfil["total_masculino"] / perfil["total_categoria"].replace({0: pd.NA})) * 100
+).round(1).fillna(0.0)
 
-# Ordena por tamanho da categoria (opcional)
+# Ordena por tamanho da categoria
 perfil = perfil.sort_values("total_categoria", ascending=False)
 
+# ---------------------------------------------
 # Mapa de nomes
+# ---------------------------------------------
 NOME_CATEGORIA = {
     "operacional": "Operacional",
     "educacao": "Educação",
@@ -268,18 +310,19 @@ NOME_CATEGORIA = {
 }
 
 def formatar_categoria(cat: str) -> str:
-    cat = str(cat).strip()
+    cat = str(cat).strip().lower()
     return NOME_CATEGORIA.get(cat, cat)
 
 def servidor_singular_plural(n: int) -> str:
     return "servidor" if int(n) == 1 else "servidores"
 
-# Donut function
 DONUT_DOMAIN = ["Masculino", "Feminino"]
 DONUT_RANGE = ["#0068c9", "#e377c2"]
 
 def donut_genero_categoria(perfil_df: pd.DataFrame, categoria: str):
-    subset = perfil_df.loc[perfil_df["categoria_cargo"] == categoria]
+    categoria = str(categoria).strip().lower()
+    subset = perfil_df.loc[perfil_df["categoria_cargo"].astype(str).str.strip().str.lower() == categoria]
+
     if subset.empty:
         st.warning(f"Categoria não encontrada: {categoria}")
         return
@@ -287,10 +330,21 @@ def donut_genero_categoria(perfil_df: pd.DataFrame, categoria: str):
     linha = subset.iloc[0]
     categoria_fmt = formatar_categoria(categoria)
 
+    total_cat = int(linha["total_categoria"])
+    total_f = int(linha["total_feminino"])
+    total_m = int(linha["total_masculino"])
+
+    # percentuais recalculados a partir dos totais (evita drift por arredondamento)
+    if total_cat > 0:
+        pct_f = round((total_f / total_cat) * 100, 1)
+        pct_m = round((total_m / total_cat) * 100, 1)
+    else:
+        pct_f, pct_m = 0.0, 0.0
+
     donut_df = pd.DataFrame({
         "genero": ["Masculino", "Feminino"],
-        "percentual": [linha["percentual_masculino"], linha["percentual_feminino"]],
-        "total": [linha["total_masculino"], linha["total_feminino"]],
+        "percentual": [pct_m, pct_f],
+        "total": [total_m, total_f],
     })
 
     st.markdown(f"#### {categoria_fmt}")
@@ -303,7 +357,7 @@ def donut_genero_categoria(perfil_df: pd.DataFrame, categoria: str):
             color=alt.Color(
                 "genero:N",
                 scale=alt.Scale(domain=DONUT_DOMAIN, range=DONUT_RANGE),
-                legend=None
+                legend=None,
             ),
             tooltip=[
                 alt.Tooltip("genero:N", title="Gênero"),
@@ -314,28 +368,25 @@ def donut_genero_categoria(perfil_df: pd.DataFrame, categoria: str):
         .properties(width=300, height=240)
     )
 
-    total_cat = int(linha["total_categoria"])
     center_text = f"{total_cat}\n{servidor_singular_plural(total_cat)}"
-
-    # Texto central único com plural correto (sem sobreposição)
-    center = alt.Chart(pd.DataFrame({"text": [center_text]})).mark_text(
-        fontSize=16,
-        fontWeight="bold",
-        lineHeight=18
-    ).encode(text="text:N")
+    center = (
+        alt.Chart(pd.DataFrame({"text": [center_text]}))
+        .mark_text(fontSize=16, fontWeight="bold", lineHeight=18)
+        .encode(text="text:N")
+    )
 
     st.altair_chart(donut + center, use_container_width=True)
 
-    st.caption(
-        f"F: {linha['percentual_feminino']:.1f}% ({int(linha['total_feminino'])}) • "
-        f"M: {linha['percentual_masculino']:.1f}% ({int(linha['total_masculino'])})"
-    )
+    st.caption(f"F: {pct_f:.1f}% ({total_f}) • M: {pct_m:.1f}% ({total_m})")
 
-# Render 2 por linha (usando as categorias do perfil)
+
+# Render 2 por linha
 cats = (
     perfil["categoria_cargo"]
     .dropna()
     .astype(str)
+    .str.strip()
+    .str.lower()
     .unique()
     .tolist()
 )
@@ -355,6 +406,7 @@ for i in range(0, len(cats), 2):
     st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
 
 st.divider()
+
 
 
 
