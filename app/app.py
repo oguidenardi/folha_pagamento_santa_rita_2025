@@ -825,3 +825,414 @@ Em síntese, os dados mostram que os salários mais elevados estão concentrados
 A combinação desses fatores evidencia que as remunerações mais altas se distribuem entre cargos de **alta responsabilidade técnica**, **chefia** e **atendimento direto à população**, revelando a estrutura salarial das áreas que sustentam as atividades essenciais da gestão pública no município.
 
 """)
+st.divider()
+
+# ---------------------
+# Cargos Comissionados
+# ---------------------
+
+st.markdown("""
+# Cargos Comissionados
+
+Os cargos comissionados representam uma parcela estratégica da estrutura administrativa da Prefeitura. 
+Diferentemente dos cargos efetivos, eles são ocupados por profissionais nomeados diretamente pela gestão, geralmente para funções de confiança, 
+direção, assessoramento ou coordenação de políticas públicas.
+
+Em 2025, Santa Rita do Passa Quatro contou com um grupo expressivo de servidores comissionados, 
+distribuídos em áreas como administração, assistência social, planejamento, educação, saúde e gestão de pessoas. 
+Esses profissionais desempenham papéis essenciais no funcionamento do governo, atuando em postos que envolvem tomada de decisão, 
+supervisão de equipes e execução de projetos de interesse público.
+
+A seguir, apresentamos uma lista detalhada de todos os cargos comissionados existentes no município ao longo do ano, 
+acompanhada do número de pessoas que ocuparam cada função. Essa transparência é fundamental para que o cidadão possa compreender como 
+a máquina pública é organizada e onde estão alocados os cargos de confiança da administração municipal.
+""")
+
+df_cargos_c = df[df["cargo"].str.endswith(".c", na=False)].copy()
+
+df_cargos_c_unico = df_cargos_c.drop_duplicates(subset="id_servidor").copy()
+
+cargos_comissionados_lista = (
+    df_cargos_c_unico
+    .groupby("cargo")["id_servidor"]
+    .nunique()
+    .reset_index(name="quantidade_servidores")
+    .sort_values("quantidade_servidores", ascending=False)
+    .reset_index(drop=True)
+)
+
+st.markdown("""
+## Lista de Cargos Comissionados e Quantidade de Servidores (2025)
+""")
+st.dataframe(
+    cargos_comissionados_lista.rename(columns={
+        "cargo": "Cargo Comissionado",
+        "quantidade_servidores": "Quantidade de Servidores"
+    }),
+    use_container_width=True,
+    hide_index=True
+)
+
+st.markdown("""
+### O que mostra a lista de cargos comissionados
+
+A distribuição dos cargos comissionados ao longo de 2025 revela uma estrutura voltada principalmente para funções de assessoria e coordenação. 
+O cargo com maior número de ocupantes foi o de **Assessor de Implementação de Políticas Públicas**, com **19 servidores**, 
+evidenciando a necessidade de suporte operacional e técnico em áreas estratégicas da administração.
+
+Em seguida, a função de **Assessor de Gabinete de Diretor de Departamento** aparece com **12 ocupantes**, 
+reforçando o papel de apoio direto às chefias das diferentes áreas da Prefeitura. Já o cargo de **Assessor de Gabinete**, com **4 servidores**, 
+também se destaca como uma função que oferece suporte administrativo à gestão.
+
+Os demais cargos comissionados são majoritariamente posições de direção, cada uma exercida por apenas **1 ou 2 servidores**, 
+como **Diretor do Departamento de Administração**, **Procurador Geral do Município**, **Diretor de Finanças**, **Diretor de Obras e Engenharia**, 
+**Diretor de Educação**, entre outros. Isso mostra que a estrutura comissionada é composta, em grande parte, 
+por postos de liderança que coordenam setores essenciais do governo municipal.
+
+No conjunto, a listagem revela que os cargos comissionados cumprem papéis distintos: 
+uma base numerosa de assessores garantindo o funcionamento diário da administração e um conjunto de diretores 
+responsáveis pela condução estratégica das políticas públicas. Essa divisão ajuda a entender como a Prefeitura distribui 
+responsabilidades e organiza sua força de trabalho de confiança ao longo do ano.
+""")
+
+st.markdown("""
+### Distribuição por gênero entre os cargos comissionados
+
+Entre os **53 servidores comissionados** que atuaram na Prefeitura ao longo de 2025, a distribuição por gênero mostra 
+um quadro relativamente equilibrado, mas ainda com leve predominância masculina. 
+Do total, **29 cargos foram ocupados por homens** (54,7%) e **24 por mulheres** (45,3%).
+
+Esse equilíbrio aparece tanto em funções de assessoria quanto nos cargos de direção, 
+demonstrando que a presença feminina está distribuída por diferentes áreas da administração. 
+A leitura conjunta desses números ajuda a entender como os cargos de confiança são ocupados e como se 
+desenha a composição da equipe estratégica do governo municipal.
+""")
+st.markdown("<br>", unsafe_allow_html=True)
+
+df_comissionados = df[df["categoria_cargo"] == "comissionado"].drop_duplicates("id_servidor")
+total_masc = (df_comissionados["genero"] == "M").sum()
+total_fem = (df_comissionados["genero"] == "F").sum()
+
+
+total = total_masc + total_fem
+pct_masc = round((total_masc / total) * 100, 1)
+pct_fem = round((total_fem / total) * 100, 1)
+
+
+dados_genero = pd.DataFrame({
+    "genero": ["Masculino", "Feminino"],
+    "quantidade": [total_masc, total_fem],
+    "percentual": [pct_masc, pct_fem]
+})
+
+
+cores_genero = {
+    "Masculino": "#0068c9",
+    "Feminino": "#e377c2"
+}
+
+
+dados_genero["meio_barra"] = dados_genero["quantidade"] / 2
+dados_genero["percentual_formatado"] = dados_genero["percentual"].round(0).astype(int).astype(str) + "%"
+
+
+cores_genero = {
+    "Masculino": "#0068c9",
+    "Feminino": "#e377c2"
+}
+
+
+chart = (
+    alt.Chart(dados_genero)
+    .mark_bar(size=130)
+    .encode(
+        x=alt.X("genero:N", title="", axis=alt.Axis(labelAngle=0)),
+        y=alt.Y("quantidade:Q", title="Quantidade de Servidores"),
+        color=alt.Color(
+            "genero:N",
+            scale=alt.Scale(domain=list(cores_genero.keys()),
+                            range=list(cores_genero.values())),
+            legend=None
+        ),
+        tooltip=[
+            alt.Tooltip("genero:N", title="Gênero"),
+            alt.Tooltip("quantidade:Q", title="Total"),
+            alt.Tooltip("percentual:Q", title="Percentual (%)", format=".0f")
+        ]
+    )
+    .properties(
+        width=450,
+        height=420,
+        title=alt.TitleParams(
+            text="Distribuição de Servidores Comissionados por Gênero (2025)",
+            anchor="middle",
+            fontSize=16,
+            fontWeight="bold",
+            offset=12
+        )
+    )
+)
+
+
+labels_top = (
+    alt.Chart(dados_genero)
+    .mark_text(
+        dy=-12,
+        fontSize=16,
+        fontWeight="bold"
+    )
+    .encode(
+        x="genero:N",
+        y="quantidade:Q",
+        text="quantidade:Q"
+    )
+)
+
+
+labels_inside = (
+    alt.Chart(dados_genero)
+    .mark_text(
+        align="center",
+        baseline="middle",
+        color="white",
+        fontSize=16,
+        fontWeight="bold"
+    )
+    .encode(
+        x="genero:N",
+        y=alt.Y("meio_barra:Q"),
+        text="percentual_formatado:N"
+    )
+)
+
+
+st.altair_chart(chart + labels_top + labels_inside, use_container_width=True)
+st.markdown("<br>", unsafe_allow_html=True)
+
+st.markdown("""
+### Lista completa de Cargos Comissionados e seus salários
+""")
+st.markdown("<br>", unsafe_allow_html=True)
+
+df_com_all = df[df["categoria_cargo"] == "comissionado"].copy()
+df_com_all["id_servidor"] = df_com_all["id_servidor"].astype(str)
+df_com_all["cargo"] = df_com_all["cargo"].astype(str)
+
+df_com = df[
+    (df["categoria_cargo"] == "comissionado") &
+    (df["tipo_pagamento"] == "folha_mensal")
+].copy()
+
+df_com["proventos"] = pd.to_numeric(df_com["proventos"], errors="coerce")
+df_com = df_com.dropna(subset=["proventos", "id_servidor", "cargo"]).copy()
+df_com["id_servidor"] = df_com["id_servidor"].astype(str)
+df_com["cargo"] = df_com["cargo"].astype(str)
+
+df_com_1por_servidor = (
+    df_com.sort_values(["id_servidor", "proventos"], ascending=[True, False])
+    .drop_duplicates(subset=["id_servidor"], keep="first")
+    .copy()
+)
+
+tabela_competa = (
+    df_com_1por_servidor.groupby("cargo", as_index=False)
+    .agg(
+        salario_base_mensal = ("proventos", "max"),
+        quantidade_pessoas = ("id_servidor", "nunique")
+    )
+)
+
+ids_all = set(df_com_all["id_servidor"].unique())
+ids_fm = set(df_com["id_servidor"].unique())
+faltantes_ids = list(ids_all - ids_fm)
+
+df_faltantes = (
+    df_com_all[df_com_all["id_servidor"].isin(faltantes_ids)][
+        ["id_servidor", "cargo", "tipo_pagamento"]
+    ]
+    .drop_duplicates(subset=["id_servidor"])
+    .copy()
+)
+
+if not df_faltantes.empty:
+    linhas_extra = (
+        df_faltantes.groupby("cargo", as_index=False)
+        .agg(quantidade_pessoas=("id_servidor", "nunique"))
+    )
+    linhas_extra["salario_base_mensal"] = pd.NA
+    tabela_completa = pd.concat([tabela_competa, linhas_extra], ignore_index=True)
+
+tabela_completa["salario_str"] = tabela_completa["salario_base_mensal"].apply(br_money)
+
+tabela_completa = tabela_completa.sort_values(
+    by="salario_base_mensal",
+    ascending=False,
+    na_position="last"
+).reset_index(drop=True)
+
+tabela_exibicao = tabela_completa[
+    ["cargo", "salario_str", "quantidade_pessoas"]
+].rename(
+    columns = {
+        "cargo": "Cargo Comissionado",
+        "salario_str": "Salário Base",
+        "quantidade_pessoas": "Qtd. de Pessoas"
+    }
+)
+
+st.dataframe(tabela_exibicao, use_container_width=True, hide_index=True)
+st.caption(
+    f"Total de Servidores comissionados identificados: {len(ids_all)}.\n"
+    f"Servidores exclusivamente com rescisão em 2025: {len(faltantes_ids)}"
+)
+
+st.markdown("""
+### Entenda a Estrutura dos Cargos Comissionados em 2025
+
+A lista completa dos cargos comissionados da Prefeitura revela como está distribuída a estrutura de confiança da 
+administração municipal ao longo de 2025. Os dados mostram uma combinação de **cargos de direção**, 
+que concentram os maiores salários, e um **grande contingente de assessores**, 
+responsáveis por dar suporte às diferentes áreas do governo.
+
+O posto mais bem remunerado é o de **Procurador Geral do Município**, 
+com salário base mensal de **R\$ 24.687,05**, ocupando isoladamente o topo da estrutura. 
+Na sequência, aparecem diretores de áreas estratégicas, como **Agricultura e Meio Ambiente**, 
+**Educação**, **Desenvolvimento Urbano** e **Assistência Social**, 
+todos com salários acima de **R\$ 10 mil**, refletindo funções de alta responsabilidade dentro da gestão.
+
+Entre os cargos mais numerosos, destacam-se os de **Assessor de Implementação de Políticas Públicas**, 
+com **17 servidores**, e **Assessor de Gabinete de Diretor de Departamento**, com **12 servidores**, 
+indicando que grande parte da força comissionada está concentrada em funções de apoio direto à administração. 
+Já o cargo de **Assessor de Gabinete** aparece duas vezes na listagem: quatro servidores com salário base e 
+mais um caso registrado apenas com rescisão, sem pagamento mensal.
+
+Na base da estrutura aparece o cargo de **Gestor Adjunto de Ensino Fundamental**, 
+com salário de **R\$ 2.217,63**, representando o menor vencimento entre os comissionados.
+
+A leitura da tabela completa evidencia uma estrutura com salários bastante variados, 
+mas com um padrão claro: **altas remunerações nos cargos de direção** e **grande volume de servidores em funções de assessoria**, 
+que compõem a espinha administrativa da Prefeitura.
+""")
+
+df_com_gastos = df[df["categoria_cargo"] == "comissionado"].copy()
+
+df_com_gastos["proventos"] = pd.to_numeric(df_com_gastos["proventos"], errors="coerce")
+
+df_com_gastos = df_com_gastos.dropna(subset=["proventos"])
+
+gasto_anual_comissionados = df_com_gastos["proventos"].sum()
+
+gasto_anual_comissionados_str = br_money(gasto_anual_comissionados)
+
+st.markdown("""
+### Quanto custam os cargos comissionados?
+
+Ao longo de 2025, a Prefeitura investiu **R\$ 4.008.750,36** no pagamento de salários, 
+benefícios e encargos vinculados aos cargos comissionados. Esse valor considera todos os tipos de pagamento realizados no ano — 
+incluindo salário base mensal, gratificações, férias, 13º salário e eventuais rescisões.
+
+O montante evidencia o peso financeiro dessa estrutura dentro da folha municipal. 
+Embora os cargos de direção concentrem as maiores remunerações individuais, é o conjunto formado por assessores e 
+equipes de apoio que representa a parcela mais significativa do gasto total, devido ao número maior de servidores nessas funções.
+""")
+
+st.markdown(f"""
+<div style='text-align:center;'>
+    <div class="kpi-card">
+        <div class="kpi-title">Gasto anual com Cargos Comissionados</div>
+        <p class="kpi-value">{gasto_anual_comissionados_str}</p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ============================================
+# CARGA HORÁRIA DOS COMISSIONADOS (2025)
+# ============================================
+df_com_unico = (
+    df[df["categoria_cargo"] == "comissionado"]
+    .drop_duplicates(subset="id_servidor")
+    .copy()
+)
+
+df_com_unico["carga_horaria_semanal"] = pd.to_numeric(
+    df_com_unico["carga_horaria_semanal"],
+    errors="coerce"
+)
+
+df_ch = df_com_unico.dropna(subset=["carga_horaria_semanal"]).copy()
+
+# metricas
+carga_min = int(df_ch["carga_horaria_semanal"].min())
+carga_max = int(df_ch["carga_horaria_semanal"].max())
+
+# moda
+carga_moda = int(df_ch["carga_horaria_semanal"].mode().iloc[0])
+
+# quantos servidores têm essa carga predominante
+qtd_moda = int((df_ch["carga_horaria_semanal"] == carga_moda).sum())
+total_com = int(df_ch["id_servidor"].nunique())
+
+# strings de exibicao
+carga_moda_str = f"{carga_moda}h/sem"
+carga_min_str = f"{carga_min}h/sem"
+carga_max_str = f"{carga_max}h/sem"
+st.markdown("<br><br>", unsafe_allow_html=True)
+st.markdown("### Carga horária semanal dos cargos comissionados")
+st.markdown("<br>", unsafe_allow_html=True)
+
+card_style = """
+<div class="kpi-card" style="
+    height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+">
+    {content}
+</div>
+"""
+
+c1, c2, c3 = st.columns(3, gap="large")
+
+with c1:
+    st.markdown(f"""
+    <div class="kpi-card">
+      <div class="kpi-title">Carga horária predominante</div>
+      <p class="kpi-value">{carga_moda_str}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c2:
+    st.markdown(f"""
+    <div class="kpi-card">
+      <div class="kpi-title">Menor carga registrada</div>
+      <p class="kpi-value">{carga_min_str}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c3:
+    st.markdown(f"""
+    <div class="kpi-card">
+      <div class="kpi-title">Maior carga registrada</div>
+      <p class="kpi-value">{carga_max_str}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+st.markdown("""
+### O que revela a carga horária dos cargos comissionados
+
+A análise da carga horária semanal dos cargos comissionados mostra um padrão bem definido dentro da Prefeitura. 
+A grande maioria dos servidores desse grupo cumpre **40 horas semanais**, que aparece como a carga 
+horária predominante e também como o limite máximo registrado.
+
+O menor valor encontrado foi de **30 horas semanais**, 
+observado em poucos cargos específicos. Isso indica que a estrutura comissionada opera, em sua maior parte, 
+em regime de jornada completa, reforçando o caráter de funções de direção, 
+coordenação e assessoramento que exigem dedicação integral.
+
+Apesar da variação pontual, o quadro geral revela uma distribuição bastante homogênea da carga horária entre os comissionados.
+""")
+
+st.divider()
