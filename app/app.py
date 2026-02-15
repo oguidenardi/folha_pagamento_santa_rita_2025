@@ -1236,3 +1236,177 @@ Apesar da variação pontual, o quadro geral revela uma distribuição bastante 
 """)
 
 st.divider()
+
+# -------------------------
+# Carga Horária Semanal
+# -------------------------
+
+st.markdown("""
+# Carga Horária Semanal
+            
+A jornada semanal ajuda a interpretar melhor a folha salarial: além de *quanto* se paga,
+é possível entender *quantas horas* os servidores cumprem em suas rotinas de trabalho.
+""")
+
+df_unico = df.drop_duplicates(subset="id_servidor").copy()
+
+df_unico["carga_horaria_semanal"] = pd.to_numeric(
+    df_unico["carga_horaria_semanal"],
+    errors="coerce"
+)
+
+df_ch = df_unico.dropna(subset=["carga_horaria_semanal"]).copy()
+
+carga_freq = (
+    df_ch["carga_horaria_semanal"]
+    .value_counts()
+    .reset_index()
+)
+
+carga_freq.columns = ["carga_horaria_semanal", "quantidade_servidores"]
+
+carga_freq = carga_freq.sort_values(
+    by="quantidade_servidores",
+    ascending=False
+).reset_index(drop=True)
+
+total_servidores = int(df_ch["id_servidor"].nunique())
+carga_pred = int(carga_freq.iloc[0]["carga_horaria_semanal"])
+qtd_pred = int(carga_freq.iloc[0]["quantidade_servidores"])
+pct_pred = round((qtd_pred / total_servidores) * 100, 0)
+carga_min = int(df_ch["carga_horaria_semanal"].min())
+carga_max = int(df_ch["carga_horaria_semanal"].min())
+
+carga_pred_str = f"{carga_pred} horas por semana"
+carga_min_str = f"{carga_min} horas por semana"
+carga_max = f"{carga_max} horas por semana"
+pct_pred_str = f"{int(pct_pred)}%"
+
+st.markdown("""
+<style>
+.ch-card {
+  height: 160px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(49, 51, 63, 0.2);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.ch-title {
+  font-size: 16px;
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+
+p.ch-value {
+  font-size: 25px;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.ch-subtitle {
+  font-size: 16px;
+  opacity: 0.75;
+  margin-top: 6px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Primeira linha
+c1, c2 = st.columns(2, gap="large")
+
+with c1:
+    st.markdown(f"""
+    <div class="ch-card">
+      <div class="ch-title">Carga horária predominante</div>
+      <p class="ch-value">{carga_pred_str}</p>
+      <div class="ch-subtitle">{qtd_pred} servidores (de {total_servidores})</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c2:
+    st.markdown(f"""
+    <div class="ch-card">
+      <div class="ch-title">% na carga predominante</div>
+      <p class="ch-value">{pct_pred_str}</p>
+      <div class="ch-subtitle">do total de servidores</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
+
+
+# Segunda linha
+c3, c4 = st.columns(2, gap="large")
+
+with c3:
+    st.markdown(f"""
+    <div class="ch-card">
+      <div class="ch-title">Menor carga horária registrada</div>
+      <p class="ch-value">{carga_min_str}</p>
+      <div class="ch-subtitle">&nbsp;</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c4:
+    st.markdown(f"""
+    <div class="ch-card">
+      <div class="ch-title">Maior carga horária registrada</div>
+      <p class="ch-value">{carga_max_str}</p>
+      <div class="ch-subtitle">&nbsp;</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("""
+A análise da carga horária semanal dos servidores públicos municipais revela um padrão predominante na estrutura funcional da Prefeitura em 2025.
+
+A jornada mais comum é de **40 horas por semana**, cumprida por **490 servidores**, o que representa **50% de todo o quadro funcional** (979 servidores no total). Isso indica que metade dos profissionais atua em regime integral de trabalho.
+
+No outro extremo, a menor carga horária registrada foi de **6 horas semanais**, aplicada a situações específicas dentro da estrutura administrativa. Já a maior jornada identificada também foi de **40 horas semanais**, consolidando esse modelo como o padrão predominante no município.
+
+Os dados mostram, portanto, uma estrutura majoritariamente baseada em jornadas completas, com poucas exceções de cargas reduzidas.
+""")
+
+
+# cargos com carga horaria semanal de 6 horas
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("""
+## Cargos com menor carga horária semanal
+
+A menor carga horária registrada entre os servidores municipais em 2025 foi de **6 horas por semana**. 
+Diferentemente das jornadas administrativas tradicionais, essa carga reduzida está concentrada exclusivamente em **especialidades médicas**.
+
+Entre os cargos identificados estão Médico Clínico Geral, Ginecologista/Obstetra, Cardiologista, Neurologista Adulto, 
+Endocrinologista, Ortopedista/Traumatologista, Psiquiatra Adulto e Urologista.
+
+Esse modelo é comum na saúde pública municipal. Em vez de cumprirem jornada integral, esses profissionais atuam em regime 
+de atendimento especializado, geralmente em dias ou turnos específicos da semana. Trata-se de um formato de contratação que 
+permite ao município oferecer especialidades médicas à população sem a necessidade de vínculos de 40 horas semanais.
+
+Os dados indicam que a carga horária reduzida não representa menor importância funcional, 
+mas sim um modelo de prestação de serviço típico das áreas médicas especializadas.
+""")
+st.markdown("<br>", unsafe_allow_html=True)
+df_unico = df.drop_duplicates(subset="id_servidor").copy()
+
+cargos_6h = (
+    df_unico[df_unico["carga_horaria_semanal"] == 6]
+    .groupby("cargo")["id_servidor"]
+    .nunique()
+    .reset_index(name="quantidade_servidores")
+    .sort_values("quantidade_servidores", ascending=False)
+)
+
+for _, row in cargos_6h.iterrows():
+    st.markdown(
+        f"- **{row['cargo']}** - {row['quantidade_servidores']} servidor(es)" 
+    )
+
+st.divider()
