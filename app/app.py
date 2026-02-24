@@ -1445,3 +1445,57 @@ Essa análise por categoria permite compreender **por que existem jornadas tão 
 """)
 
 st.divider()
+
+st.markdown("""
+# Desligamento de servidores em 2025
+""")
+
+df_unico = df.drop_duplicates(subset="id_servidor").copy()
+
+df_unico["data_desligamento"] = pd.to_datetime(
+    df_unico["data_desligamento"],
+    errors="coerce"
+)
+
+df_desligados_2025 = df_unico[
+    df_unico["data_desligamento"].dt.year == 2025
+].copy()
+
+total_desligados_2025 = df_desligados_2025["id_servidor"].nunique()
+
+total_servidores = df_unico["id_servidor"].nunique()
+
+pct_desligados = round((total_desligados_2025 / total_servidores) * 100, 2)
+
+desligados_categoria = (
+    df_desligados_2025.groupby("categoria_cargo")["id_servidor"]
+    .nunique()
+    .reset_index(name="quantidade_servidores")
+    .sort_values("quantidade_servidores", ascending=False)
+)
+
+desligados_categoria["categoria_cargo"] = desligados_categoria["categoria_cargo"].map(NOME_CATEGORIA)
+
+desligados_categoria = desligados_categoria.rename(columns={
+    "categoria_cargo": "Categoria",
+    "quantidade_servidores": "Desligados"
+})
+
+st.markdown("""
+### Desligamentos por Categoria de Cargo (2025)
+""")
+
+st.dataframe(desligados_categoria, hide_index=True)
+
+st.markdown("""
+### Resumo dos Desligamentos em 2025
+
+Em 2025, a Prefeitura de Santa Rita do Passa Quatro registrou **15 desligamentos** no quadro de servidores.  
+A maior parte das saídas ocorreu na **Educação**, com **6 desligamentos**, seguida por **Comissionados** e **Operacional**, 
+ambos com **3** cada.
+
+As categorias **Administrativo**, **Assistência Social** e **Saúde** tiveram **1 desligamento** cada, 
+indicando um cenário de **baixa rotatividade** e estabilidade geral no quadro funcional ao longo do ano.
+""")
+
+st.divider()
