@@ -1499,3 +1499,70 @@ indicando um cenário de **baixa rotatividade** e estabilidade geral no quadro f
 """)
 
 st.divider()
+
+# -------------------------------------
+# Servidores com mais tempo de serviço
+# -------------------------------------
+
+df_unico = df.drop_duplicates(subset="id_servidor").copy()
+
+df_unico["data_admissao"] = pd.to_datetime(
+    df_unico["data_admissao"],
+    errors="coerce"
+)
+
+hoje = pd.Timestamp.today()
+
+df_unico["tempo_trabalho_anos"] = (
+    (hoje - df_unico["data_admissao"]).dt.days / 365.25
+).round(0)
+
+servidor_mais_antigo = (
+    df_unico[df_unico["genero"] == "M"]
+    .sort_values("tempo_trabalho_anos", ascending=False)
+    .head(1)
+)
+
+servidora_mais_antiga = (
+    df_unico[df_unico["genero"] == "F"]
+    .sort_values("tempo_trabalho_anos", ascending=False)
+    .head(1)
+)
+
+mais_antigos = pd.concat([
+    servidor_mais_antigo,
+    servidora_mais_antiga
+], axis=0)
+
+st.markdown("""
+# Servidores Mais Antigos da Administração Municipal
+
+O levantamento realizado a partir da base de dados da folha de pagamento de 2025 identificou os servidores 
+com maior tempo de trabalho prestado ao município de Santa Rita do Passa Quatro. A análise considerou apenas vínculos únicos, 
+evitando qualquer duplicidade por `id_servidor`, e calculou o tempo total de serviço com base na data de admissão registrada.
+
+Os resultados mostram profissionais com décadas de dedicação ao serviço público:
+
+<br>
+
+- **Servidor mais antigo (Masculino)**  
+  - **Cargo:** Auxiliar de Manutenção  
+  - **Categoria:** Operacional  
+  - **Carga horária semanal:** 40 horas  
+  - **Tempo total de serviço:** **47 anos**
+
+<br>
+            
+- **Servidora mais antiga (Feminino)**  
+  - **Cargo:** Professora  
+  - **Categoria:** Educação  
+  - **Carga horária semanal:** 30 horas  
+  - **Tempo total de serviço:** **43 anos**
+
+<br>
+
+Esses números evidenciam histórias longas dentro da administração municipal, 
+marcadas por contribuição contínua em áreas essenciais como manutenção urbana e educação pública. 
+O tempo de atuação desses profissionais destaca o papel fundamental desempenhado por servidores que, ao longo de décadas, 
+sustentam o funcionamento dos serviços públicos da cidade.
+""", unsafe_allow_html=True)
