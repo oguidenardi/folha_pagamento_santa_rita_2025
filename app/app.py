@@ -1240,12 +1240,8 @@ st.divider()
 # -------------------------
 # Carga Horária Semanal
 # -------------------------
-
 st.markdown("""
 # Carga Horária Semanal
-            
-A jornada semanal ajuda a interpretar melhor a folha salarial: além de *quanto* se paga,
-é possível entender *quantas horas* os servidores cumprem em suas rotinas de trabalho.
 """)
 
 df_unico = df.drop_duplicates(subset="id_servidor").copy()
@@ -1255,158 +1251,197 @@ df_unico["carga_horaria_semanal"] = pd.to_numeric(
     errors="coerce"
 )
 
-df_ch = df_unico.dropna(subset=["carga_horaria_semanal"]).copy()
-
-carga_freq = (
-    df_ch["carga_horaria_semanal"]
-    .value_counts()
-    .reset_index()
+cargas_existentes = (
+    df_unico["carga_horaria_semanal"]
+    .dropna()
+    .sort_values()
+    .unique()
 )
 
-carga_freq.columns = ["carga_horaria_semanal", "quantidade_servidores"]
-
-carga_freq = carga_freq.sort_values(
-    by="quantidade_servidores",
-    ascending=False
-).reset_index(drop=True)
-
-total_servidores = int(df_ch["id_servidor"].nunique())
-carga_pred = int(carga_freq.iloc[0]["carga_horaria_semanal"])
-qtd_pred = int(carga_freq.iloc[0]["quantidade_servidores"])
-pct_pred = round((qtd_pred / total_servidores) * 100, 0)
-carga_min = int(df_ch["carga_horaria_semanal"].min())
-carga_max = int(df_ch["carga_horaria_semanal"].min())
-
-carga_pred_str = f"{carga_pred} horas por semana"
-carga_min_str = f"{carga_min} horas por semana"
-carga_max = f"{carga_max} horas por semana"
-pct_pred_str = f"{int(pct_pred)}%"
-
 st.markdown("""
-<style>
-.ch-card {
-  height: 160px;
-  padding: 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(49, 51, 63, 0.2);
-  background: rgba(255, 255, 255, 0.02);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
+A Prefeitura de Santa Rita do Passa Quatro adota diferentes modelos de jornada de trabalho entre seus servidores.  
+No levantamento realizado com base nos dados da folha de pagamento de 2025 (considerando cada servidor apenas uma vez), 
+foram encontradas **12 cargas horárias semanais distintas**:
 
-.ch-title {
-  font-size: 16px;
-  opacity: 0.85;
-  margin-bottom: 6px;
-}
+- **6 horas por semana**
+- **10 horas por semana**
+- **15 horas por semana**
+- **20 horas por semana**
+- **25 horas por semana**
+- **27 horas por semana**
+- **29 horas por semana**
+- **30 horas por semana**
+- **35 horas por semana**
+- **36 horas por semana**
+- **40 horas por semana**
+- **44 horas por semana**
 
-p.ch-value {
-  font-size: 25px;
-  font-weight: 800;
-  margin: 0;
-  line-height: 1.1;
-}
-
-.ch-subtitle {
-  font-size: 16px;
-  opacity: 0.75;
-  margin-top: 6px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# Primeira linha
-c1, c2 = st.columns(2, gap="large")
-
-with c1:
-    st.markdown(f"""
-    <div class="ch-card">
-      <div class="ch-title">Carga horária predominante</div>
-      <p class="ch-value">{carga_pred_str}</p>
-      <div class="ch-subtitle">{qtd_pred} servidores (de {total_servidores})</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with c2:
-    st.markdown(f"""
-    <div class="ch-card">
-      <div class="ch-title">% na carga predominante</div>
-      <p class="ch-value">{pct_pred_str}</p>
-      <div class="ch-subtitle">do total de servidores</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
-
-
-# Segunda linha
-c3, c4 = st.columns(2, gap="large")
-
-with c3:
-    st.markdown(f"""
-    <div class="ch-card">
-      <div class="ch-title">Menor carga horária registrada</div>
-      <p class="ch-value">{carga_min_str}</p>
-      <div class="ch-subtitle">&nbsp;</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with c4:
-    st.markdown(f"""
-    <div class="ch-card">
-      <div class="ch-title">Maior carga horária registrada</div>
-      <p class="ch-value">{carga_max_str}</p>
-      <div class="ch-subtitle">&nbsp;</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-st.markdown("""
-A análise da carga horária semanal dos servidores públicos municipais revela um padrão predominante na estrutura funcional da Prefeitura em 2025.
-
-A jornada mais comum é de **40 horas por semana**, cumprida por **490 servidores**, o que representa **50% de todo o quadro funcional** (979 servidores no total). Isso indica que metade dos profissionais atua em regime integral de trabalho.
-
-No outro extremo, a menor carga horária registrada foi de **6 horas semanais**, aplicada a situações específicas dentro da estrutura administrativa. Já a maior jornada identificada também foi de **40 horas semanais**, consolidando esse modelo como o padrão predominante no município.
-
-Os dados mostram, portanto, uma estrutura majoritariamente baseada em jornadas completas, com poucas exceções de cargas reduzidas.
+Essas variações refletem a diversidade de funções existentes na administração pública municipal — 
+desde jornadas extremamente reduzidas, geralmente ligadas a especialidades médicas, até jornadas integrais 
+predominantes nas áreas administrativas, operacionais e técnicas.
 """)
 
 
-# cargos com carga horaria semanal de 6 horas
-st.markdown("<br>", unsafe_allow_html=True)
-st.markdown("""
-## Cargos com menor carga horária semanal
+NOME_CATEGORIA = {
+    "operacional": "Operacional",
+    "educacao": "Educação",
+    "saude": "Saúde",
+    "administrativo": "Administrativo",
+    "comissionado": "Comissionado",
+    "assistencia_social": "Assistência Social",
+    "tecnico": "Técnico",
+    "cultura": "Cultura",
+    "politico": "Político",
+    "juridico": "Jurídico",
+}
 
-A menor carga horária registrada entre os servidores municipais em 2025 foi de **6 horas por semana**. 
-Diferentemente das jornadas administrativas tradicionais, essa carga reduzida está concentrada exclusivamente em **especialidades médicas**.
 
-Entre os cargos identificados estão Médico Clínico Geral, Ginecologista/Obstetra, Cardiologista, Neurologista Adulto, 
-Endocrinologista, Ortopedista/Traumatologista, Psiquiatra Adulto e Urologista.
-
-Esse modelo é comum na saúde pública municipal. Em vez de cumprirem jornada integral, esses profissionais atuam em regime 
-de atendimento especializado, geralmente em dias ou turnos específicos da semana. Trata-se de um formato de contratação que 
-permite ao município oferecer especialidades médicas à população sem a necessidade de vínculos de 40 horas semanais.
-
-Os dados indicam que a carga horária reduzida não representa menor importância funcional, 
-mas sim um modelo de prestação de serviço típico das áreas médicas especializadas.
-""")
-st.markdown("<br>", unsafe_allow_html=True)
 df_unico = df.drop_duplicates(subset="id_servidor").copy()
 
-cargos_6h = (
-    df_unico[df_unico["carga_horaria_semanal"] == 6]
-    .groupby("cargo")["id_servidor"]
-    .nunique()
-    .reset_index(name="quantidade_servidores")
-    .sort_values("quantidade_servidores", ascending=False)
+df_unico["carga_horaria_semanal"] = pd.to_numeric(
+    df_unico["carga_horaria_semanal"], errors="coerce"
 )
 
-for _, row in cargos_6h.iterrows():
-    st.markdown(
-        f"- **{row['cargo']}** - {row['quantidade_servidores']} servidor(es)" 
-    )
+
+categorias_por_carga = (
+    df_unico
+    .dropna(subset=["carga_horaria_semanal"])
+    .groupby(["carga_horaria_semanal", "categoria_cargo"])["id_servidor"]
+    .nunique()
+    .reset_index(name="quantidade_servidores")
+)
+
+
+categorias_por_carga["categoria_cargo"] = categorias_por_carga["categoria_cargo"].map(NOME_CATEGORIA)
+
+
+categorias_por_carga = categorias_por_carga.sort_values(
+    ["carga_horaria_semanal", "quantidade_servidores"],
+    ascending=[True, False]
+)
+
+
+categorias_por_carga = categorias_por_carga.rename(columns={
+    "carga_horaria_semanal": "Carga Horária Semanal",
+    "categoria_cargo": "Categoria",
+    "quantidade_servidores": "Servidores"
+})
+
+
+st.dataframe(categorias_por_carga, hide_index=True)
+
+st.markdown("""
+## Distribuição das Cargas Horárias por Categoria de Cargo
+
+Após identificar as cargas horárias existentes na Prefeitura, é possível entender como essas jornadas se distribuem entre as diferentes categorias de cargo.  
+Essa etapa é fundamental para explicar **por que existem jornadas tão distintas** dentro do quadro de servidores municipais.
+
+A seguir apresentamos uma análise interpretativa baseada nos dados reais da folha de pagamento de 2025.
+
+
+
+### Principais padrões identificados
+
+#### **1) Saúde — a categoria com maior diversidade de jornadas**
+A Saúde concentra a **maior variedade de cargas horárias da Prefeitura**, variando de:
+- **6h semanais** (16 servidores)
+- **10h semanais** (20 servidores)
+- **15h semanais** (14 servidores)
+- **20h semanais** (9 servidores)
+- **30h semanais** (63 servidores)
+- **35h semanais** (11 servidores)
+- **36h semanais** (1 servidor)
+- **40h semanais** (43 servidores)
+
+Essa dispersão reflete a natureza da área:  
+**especialidades médicas atuando poucas horas**, profissionais de apoio com jornadas intermediárias e equipes técnicas/administrativas em 30h a 40h.
+
+
+
+#### 2) Educação — predominância absoluta de 30h
+A Educação apresenta jornadas entre 25h e 44h, mas com forte concentração em:
+- **30h semanais** (161 servidores)  
+- seguida por **40h** (113 servidores)
+
+Também aparecem cargas específicas como:
+- 25h semanais (3 servidores)  
+- 27h semanais (1 servidor)  
+- 29h semanais (1 servidor)  
+- 35h semanais (9 servidores)  
+- 44h semanais (1 servidor)
+
+Esse padrão está alinhado com legislações educacionais e a estrutura pedagógica municipal.
+
+
+
+#### 3) Operacional — foco em jornadas integrais
+Essa categoria é majoritariamente composta por servidores que atuam em serviços contínuos ou de natureza prática.
+
+Jornadas encontradas:
+- **40h semanais** — 262 servidores
+- **44h semanais** — 50 servidores
+- **35h semanais** — 6 servidores
+
+A prevalência de 40h e 44h é esperada para funções de manutenção, limpeza urbana, serviços gerais e transporte.
+
+
+
+#### 4) Administrativo — padrão de 35h e 40h
+Os servidores administrativos seguem um modelo mais padronizado:
+
+- **35h semanais** — 83 servidores
+- **40h semanais** — 7 servidores
+- **44h** — 2 servidores
+
+A predominância de 35h segue legislações internas e rotinas administrativas típicas.
+
+
+
+#### 5) Assistência Social — jornadas intermediárias
+A área possui:
+
+- **30h semanais** — 12 servidores  
+- **35h semanais** — 17 servidores  
+- **40h semanais** — 12 servidores  
+
+A Assistência Social costuma operar com jornadas entre 30h e 35h devido à natureza dos atendimentos, mas também absorve funções de tempo integral.
+
+
+
+#### 6) Comissionados — tendência ao padrão de 40h
+Os cargos comissionados se distribuem assim:
+
+- **40h semanais** — 48 servidores  
+- **35h semanais** — 2 servidores
+- **30h semanais** — 1 servidor
+
+Como funções de confiança, é comum que trabalhem em jornada integral.
+
+
+
+#### 7) Técnicos, Jurídico, Político e Cultura — categorias menores, mas presentes
+Essas categorias apresentam jornadas de:
+
+- **35h semanais** (Técnico: 2 servidores, Jurídico: 1 servidor, Político: 2 servidores)
+- **40h semanais** (Técnico: 4 servidores, Cultura: 1 servidor)
+- **20h semanais** (Cultura: 1 servidor)
+
+São categorias pequenas, mas ajudam a explicar a diversidade geral de jornadas.
+
+
+
+### Conclusão
+
+A Prefeitura não segue um modelo único de carga horária.  
+Ao contrário, existem **12 distintas jornadas semanais**, cada uma associada ao tipo de função desempenhada.  
+Esse mosaico de horários é resultado direto:
+
+- da natureza do trabalho,  
+- de legislações específicas,  
+- de regulamentações internas da administração,  
+- e de modelos tradicionais de determinadas profissões, especialmente na Saúde e Educação.
+
+Essa análise por categoria permite compreender **por que existem jornadas tão diferentes** e como elas se relacionam ao funcionamento real dos serviços públicos municipais.
+""")
 
 st.divider()
