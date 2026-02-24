@@ -1566,3 +1566,28 @@ marcadas por contribuição contínua em áreas essenciais como manutenção urb
 O tempo de atuação desses profissionais destaca o papel fundamental desempenhado por servidores que, ao longo de décadas, 
 sustentam o funcionamento dos serviços públicos da cidade.
 """, unsafe_allow_html=True)
+
+st.divider()
+
+st.markdown("""
+# Conclusão Geral
+
+A análise da folha de pagamento da Prefeitura de Santa Rita do Passa Quatro relativa ao ano de 2025 fornece 
+um retrato transparente sobre como o município estrutura sua força de trabalho e direciona seus recursos. 
+Os dados confirmam a predominância das áreas de Educação e Saúde, que concentram a maioria dos servidores e 
+também representam a maior parcela do orçamento destinado ao funcionalismo.
+
+A distribuição de gênero no quadro geral permanece equilibrada, embora categorias específicas mantenham 
+concentrações mais marcantes — como a forte presença feminina na Educação e a predominância masculina em funções 
+técnicas e operacionais. Já os cargos comissionados, ainda que representem apenas uma pequena parte do total de servidores, 
+exercem peso significativo na folha devido às remunerações mais elevadas.
+
+Outro ponto que se destacou foi a estabilidade da carga horária semanal, com raras exceções em funções médicas especializadas, 
+onde a legislação e a natureza técnica justificam jornadas reduzidas. Os desligamentos registrados ao longo de 2025 também 
+permaneceram dentro de um padrão esperado, indicando continuidade e baixa rotatividade no quadro municipal.
+
+Com a apresentação dos principais indicadores — custos anuais, distribuição de cargos, maiores salários, perfil por gênero, 
+análise dos comissionados, tempo de serviço e desligamentos — o estudo cumpre seu papel de ampliar a transparência pública. 
+O cidadão passa a ter uma visão clara não apenas dos gastos, mas de como o município organiza seu corpo funcional e 
+prioriza suas áreas de atuação.
+""")
